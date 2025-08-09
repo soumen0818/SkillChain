@@ -230,7 +230,7 @@ export default function StudentDashboard() {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => navigate('/my-courses')}
+                    onClick={() => navigate('/my-learning-journey')}
                   >
                     View All
                   </Button>
