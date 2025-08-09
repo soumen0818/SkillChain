@@ -36,6 +36,8 @@ import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
 import CertificateMarketplaceListing from "./pages/CertificateMarketplaceListing";
 import Footer from "@/components/Footer";
+import SettingsPage from "./pages/Settings";
+import WalletPage from "./pages/Wallet";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +55,22 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute allowedRoles={['student','teacher']}>
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet"
+              element={
+                <ProtectedRoute allowedRoles={['student','teacher']}>
+                  <WalletPage />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/student/dashboard"

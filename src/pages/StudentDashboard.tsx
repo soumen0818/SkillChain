@@ -21,17 +21,18 @@ import {
   Calendar,
   CheckCircle,
   Plus,
+  Eye,
   Settings,
-  AlertCircle
+  Share2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { listings, getActiveListing } = useMarketplace();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showMyListings, setShowMyListings] = useState(false);
 
   const stats = [
     { icon: BookOpen, label: 'Courses Enrolled', value: '3', color: 'text-blue-600' },
@@ -156,6 +157,10 @@ export default function StudentDashboard() {
 
   // Filter active marketplace listings
   const activeMarketplaceListings = listings.filter(listing => listing.status === 'active');
+  const myListings = listings.filter(listing => 
+    listing.seller === user?.username && listing.status === 'active'
+  );
+  const displayedListings = showMyListings ? myListings : activeMarketplaceListings;
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
@@ -471,16 +476,17 @@ export default function StudentDashboard() {
               {certificates.map((cert) => {
                 const isListed = getActiveListing(cert.id.toString());
                 return (
-                <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth">
+                <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
+                  {isListed && (
+                    <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                      <ShoppingCart className="w-3 h-3 mr-1" />
+                      Listed for Sale
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-4">
                     <Award className="w-12 h-12 text-primary" />
                     <div className="flex flex-col items-end space-y-1">
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
-                      {isListed && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          Listed for {isListed.price} {isListed.currency}
-                        </span>
-                      )}
                       <span className={`text-xs px-2 py-1 rounded ${
                         cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
                         cert.category === 'web3' ? 'bg-green-100 text-green-800' :
@@ -498,25 +504,30 @@ export default function StudentDashboard() {
                     <p>Token ID: {cert.tokenId}</p>
                     <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
                     <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                    {isListed && (
+                      <p className="font-medium text-green-600">
+                        Listed for: {isListed.price} {isListed.currency}
+                      </p>
+                    )}
                   </div>
                   <div className="flex space-x-2 mt-4">
                     <Button 
                       size="sm" 
                       variant="outline" 
                       className="flex-1"
-                      onClick={() => navigate(`/certificate-verification`)}
+                      onClick={() => navigate(`/verify-certificate/${cert.id}`)}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Verify
                     </Button>
                     <Button 
                       size="sm" 
-                      className={`flex-1 ${isListed ? 'bg-gray-300 text-gray-500' : 'gradient-primary'}`}
-                      onClick={() => navigate(`/certificate-marketplace/${cert.id}`)}
+                      className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
+                      onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
                       disabled={!!isListed}
                     >
                       <ShoppingCart className="w-4 h-4 mr-2" />
-                      {isListed ? 'Already Listed' : 'List for Sale'}
+                      {isListed ? 'Listed' : 'List for Sale'}
                     </Button>
                   </div>
                 </Card>
@@ -527,100 +538,148 @@ export default function StudentDashboard() {
 
           <TabsContent value="marketplace" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-semibold">Certificate Marketplace</h3>
+              <div>
+                <h3 className="text-2xl font-semibold">
+                  {showMyListings ? 'My Listings' : 'Certificate Marketplace'}
+                </h3>
+                <p className="text-muted-foreground">
+                  {showMyListings 
+                    ? `You have ${myListings.length} active listing${myListings.length !== 1 ? 's' : ''}`
+                    : `${displayedListings.length} certificates available for purchase`
+                  }
+                </p>
+              </div>
               <div className="flex space-x-2">
-                <Button variant="outline">
+                <Button 
+                  variant={showMyListings ? "default" : "outline"}
+                  onClick={() => setShowMyListings(!showMyListings)}
+                >
                   <Users className="w-4 h-4 mr-2" />
-                  My Listings ({listings.filter(l => l.seller === user?.username && l.status === 'active').length})
+                  {showMyListings ? 'View All' : 'My Listings'}
                 </Button>
-                <Button className="gradient-primary">
+                <Button className="gradient-primary" onClick={() => navigate('/list-certificate/new')}>
                   <Plus className="w-4 h-4 mr-2" />
                   List Certificate
                 </Button>
               </div>
             </div>
-
-            {/* Show user's listings first if they have any */}
-            {listings.filter(l => l.seller === user?.username && l.status === 'active').length > 0 && (
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-primary">My Active Listings</h4>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {listings.filter(l => l.seller === user?.username && l.status === 'active').map((item) => (
-                    <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth border-2 border-primary/20">
-                      <div className="flex items-start justify-between mb-4">
-                        <Trophy className="w-12 h-12 text-primary" />
-                        <div className="text-right">
-                          <span className="inline-block text-xs bg-primary/10 text-primary px-2 py-1 rounded mb-2">
-                            My Listing
-                          </span>
-                          <div>
-                            <p className="text-lg font-bold text-foreground">{item.price} {item.currency}</p>
-                            {item.alternativePrice && (
-                              <p className="text-sm text-muted-foreground">or {item.alternativePrice} {item.alternativeCurrency}</p>
-                            )}
-                          </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedListings.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <h4 className="text-lg font-semibold mb-2">
+                    {showMyListings ? 'No Active Listings' : 'No Certificates Available'}
+                  </h4>
+                  <p className="text-muted-foreground mb-6">
+                    {showMyListings 
+                      ? 'You haven\'t listed any certificates yet. Start by listing your first certificate!'
+                      : 'Be the first to list a certificate in the marketplace.'
+                    }
+                  </p>
+                  {showMyListings && (
+                    <Button className="gradient-primary" onClick={() => navigate('/list-certificate/new')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      List Your First Certificate
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                displayedListings.map((item) => (
+                  <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth relative group">
+                    {/* Seller badge for owned listings */}
+                    {item.seller === user?.username && (
+                      <div className="absolute top-3 right-3 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                        <Star className="w-3 h-3 mr-1" />
+                        Your Listing
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start justify-between mb-4">
+                      <Trophy className="w-12 h-12 text-primary" />
+                      <div className="text-right">
+                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
+                          item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                          item.category === 'web3' ? 'bg-green-100 text-green-800' :
+                          item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                          item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                          item.category === 'trading' ? 'bg-red-100 text-red-800' :
+                          'bg-pink-100 text-pink-800'
+                        }`}>
+                          {item.category}
+                        </span>
+                        <div>
+                          <p className="text-lg font-bold text-foreground">
+                            {item.price} {item.currency}
+                          </p>
+                          {item.alternativePrice && (
+                            <p className="text-sm text-muted-foreground">
+                              or {item.alternativePrice} {item.alternativeCurrency}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
-                      <p className="text-muted-foreground text-sm mb-4">Listed: {new Date(item.listingDate).toLocaleDateString()}</p>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="destructive" className="flex-1">
-                          <AlertCircle className="w-4 h-4 mr-2" />
-                          Remove
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-                <Separator />
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold">Available Certificates</h4>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activeMarketplaceListings.filter(item => item.seller !== user?.username).map((item) => (
-                <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth">
-                  <div className="flex items-start justify-between mb-4">
-                    <Trophy className="w-12 h-12 text-primary" />
-                    <div className="text-right">
-                      <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
-                        item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        item.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        item.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
-                      }`}>
-                        {item.category}
-                      </span>
-                      <div>
-                        <p className="text-lg font-bold text-foreground">{item.price} {item.currency}</p>
-                        {item.alternativePrice && (
-                          <p className="text-sm text-muted-foreground">or {item.alternativePrice} {item.alternativeCurrency}</p>
-                        )}
+                    </div>
+                    
+                    <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
+                    <div className="space-y-1 text-sm text-muted-foreground mb-4">
+                      <p>Seller: {item.seller}</p>
+                      <p>Issuer: {item.issuer}</p>
+                      <p>Grade: <span className="font-medium text-foreground">{item.grade}</span></p>
+                      <div className="flex items-center justify-between">
+                        <span>Rarity:</span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
+                          item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
+                          item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {item.rarity}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
-                  <p className="text-muted-foreground text-sm mb-4">Seller: {item.seller}</p>
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Star className="w-4 h-4 mr-2" />
-                      View Details
-                    </Button>
-                    <Button size="sm" className="flex-1 gradient-primary">
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Buy Now
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                    
+                    <div className="flex space-x-2">
+                      {item.seller === user?.username ? (
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Manage
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                      )}
+                      
+                      {item.seller !== user?.username ? (
+                        <Button size="sm" className="flex-1 gradient-primary">
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Buy Now
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Market stats */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center">
+                          <Eye className="w-3 h-3 mr-1" />
+                          {item.views} views
+                        </span>
+                        <span className="flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {Math.floor((Date.now() - new Date(item.listingDate).getTime()) / (1000 * 60 * 60 * 24))}d ago
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
         </Tabs>
