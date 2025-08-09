@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { 
   BookOpen, 
   Trophy, 
@@ -19,12 +20,16 @@ import {
   BarChart3,
   Calendar,
   CheckCircle,
-  Plus
+  Plus,
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const { listings, getActiveListing } = useMarketplace();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -149,40 +154,8 @@ export default function StudentDashboard() {
     }
   ];
 
-  const marketplace = [
-    {
-      id: 1,
-      title: 'Advanced Solidity Programming',
-      seller: 'blockchain.dev',
-      price: '0.25 ETH',
-      skillTokens: '600 ST',
-      category: 'blockchain'
-    },
-    {
-      id: 2,
-      title: 'React Web3 Integration Mastery',
-      seller: 'web3.expert',
-      price: '0.18 ETH',
-      skillTokens: '450 ST',
-      category: 'web3'
-    },
-    {
-      id: 3,
-      title: 'NFT Marketplace Development',
-      seller: 'nft.creator',
-      price: '0.22 ETH',
-      skillTokens: '550 ST',
-      category: 'nft'
-    },
-    {
-      id: 4,
-      title: 'DeFi Yield Farming Strategies',
-      seller: 'defi.master',
-      price: '0.30 ETH',
-      skillTokens: '750 ST',
-      category: 'defi'
-    }
-  ];
+  // Filter active marketplace listings
+  const activeMarketplaceListings = listings.filter(listing => listing.status === 'active');
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
@@ -495,12 +468,19 @@ export default function StudentDashboard() {
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {certificates.map((cert) => (
+              {certificates.map((cert) => {
+                const isListed = getActiveListing(cert.id.toString());
+                return (
                 <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth">
                   <div className="flex items-start justify-between mb-4">
                     <Award className="w-12 h-12 text-primary" />
                     <div className="flex flex-col items-end space-y-1">
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                      {isListed && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          Listed for {isListed.price} {isListed.currency}
+                        </span>
+                      )}
                       <span className={`text-xs px-2 py-1 rounded ${
                         cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
                         cert.category === 'web3' ? 'bg-green-100 text-green-800' :
@@ -520,17 +500,28 @@ export default function StudentDashboard() {
                     <p className="font-medium text-foreground">Market Value: {cert.value}</p>
                   </div>
                   <div className="flex space-x-2 mt-4">
-                    <Button size="sm" variant="outline" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => navigate(`/certificate-verification`)}
+                    >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Verify
                     </Button>
-                    <Button size="sm" className="flex-1 gradient-primary">
+                    <Button 
+                      size="sm" 
+                      className={`flex-1 ${isListed ? 'bg-gray-300 text-gray-500' : 'gradient-primary'}`}
+                      onClick={() => navigate(`/certificate-marketplace/${cert.id}`)}
+                      disabled={!!isListed}
+                    >
                       <ShoppingCart className="w-4 h-4 mr-2" />
-                      List for Sale
+                      {isListed ? 'Already Listed' : 'List for Sale'}
                     </Button>
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -540,7 +531,7 @@ export default function StudentDashboard() {
               <div className="flex space-x-2">
                 <Button variant="outline">
                   <Users className="w-4 h-4 mr-2" />
-                  My Listings
+                  My Listings ({listings.filter(l => l.seller === user?.username && l.status === 'active').length})
                 </Button>
                 <Button className="gradient-primary">
                   <Plus className="w-4 h-4 mr-2" />
@@ -548,8 +539,51 @@ export default function StudentDashboard() {
                 </Button>
               </div>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {marketplace.map((item) => (
+
+            {/* Show user's listings first if they have any */}
+            {listings.filter(l => l.seller === user?.username && l.status === 'active').length > 0 && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-primary">My Active Listings</h4>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {listings.filter(l => l.seller === user?.username && l.status === 'active').map((item) => (
+                    <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth border-2 border-primary/20">
+                      <div className="flex items-start justify-between mb-4">
+                        <Trophy className="w-12 h-12 text-primary" />
+                        <div className="text-right">
+                          <span className="inline-block text-xs bg-primary/10 text-primary px-2 py-1 rounded mb-2">
+                            My Listing
+                          </span>
+                          <div>
+                            <p className="text-lg font-bold text-foreground">{item.price} {item.currency}</p>
+                            {item.alternativePrice && (
+                              <p className="text-sm text-muted-foreground">or {item.alternativePrice} {item.alternativeCurrency}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
+                      <p className="text-muted-foreground text-sm mb-4">Listed: {new Date(item.listingDate).toLocaleDateString()}</p>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="destructive" className="flex-1">
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                <Separator />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold">Available Certificates</h4>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeMarketplaceListings.filter(item => item.seller !== user?.username).map((item) => (
                 <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth">
                   <div className="flex items-start justify-between mb-4">
                     <Trophy className="w-12 h-12 text-primary" />
@@ -565,8 +599,10 @@ export default function StudentDashboard() {
                         {item.category}
                       </span>
                       <div>
-                        <p className="text-lg font-bold text-foreground">{item.price}</p>
-                        <p className="text-sm text-muted-foreground">or {item.skillTokens}</p>
+                        <p className="text-lg font-bold text-foreground">{item.price} {item.currency}</p>
+                        {item.alternativePrice && (
+                          <p className="text-sm text-muted-foreground">or {item.alternativePrice} {item.alternativeCurrency}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -584,6 +620,7 @@ export default function StudentDashboard() {
                   </div>
                 </Card>
               ))}
+            </div>
             </div>
           </TabsContent>
         </Tabs>

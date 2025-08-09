@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,8 @@ import {
   Zap,
   Brain,
   BookOpen,
-  TrendingUp
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
@@ -77,6 +78,8 @@ export default function GetCertificate() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [certificateGenerated, setCertificateGenerated] = useState(false);
+  const [showCongratulations, setShowCongratulations] = useState(false);
 
   // Mock certificate data
   const certificateData: CertificateData = {
@@ -148,12 +151,21 @@ export default function GetCertificate() {
     }
 
     setIsGenerating(true);
-    // Simulate certificate generation
+    
+    // Simulate certificate generation with loading
     setTimeout(() => {
       setIsGenerating(false);
+      setCertificateGenerated(true);
+      setShowCongratulations(true);
+      
+      // Hide congratulations after animation
+      setTimeout(() => {
+        setShowCongratulations(false);
+      }, 4000);
+      
       toast({
-        title: "Certificate Generated!",
-        description: "Your blockchain certificate has been created and minted as an NFT.",
+        title: "🎉 Congratulations!",
+        description: "Your blockchain certificate has been generated and minted as an NFT!",
       });
     }, 3000);
   };
@@ -232,70 +244,164 @@ export default function GetCertificate() {
         </div>
 
         {/* Certificate Preview */}
-        <Card className="mb-8 overflow-hidden shadow-2xl border-0">
-          <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 p-12 text-white">
-            <div className="absolute top-4 right-4">
-              <Badge className="bg-white/20 text-white">NFT Certificate</Badge>
+        <Card className="mb-8 overflow-hidden shadow-2xl border-0 relative">
+          {!certificateGenerated ? (
+            /* Loading/Waiting State */
+            <div className="relative bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 p-12 text-slate-600 min-h-[400px] flex flex-col items-center justify-center">
+              <div className="text-center space-y-6">
+                {isGenerating ? (
+                  <>
+                    <div className="relative">
+                      <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto" />
+                      <div className="absolute inset-0 w-16 h-16 border-4 border-primary/20 rounded-full animate-pulse mx-auto"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold text-primary">Generating Your Certificate</h3>
+                      <p className="text-slate-500 max-w-md">
+                        Please wait while we create your blockchain-verified NFT certificate...
+                      </p>
+                      <div className="flex items-center justify-center space-x-2 mt-4">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Award className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                        <Clock className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold text-slate-600">Certificate Ready to Generate</h3>
+                      <p className="text-slate-500 max-w-md">
+                        Your course completion has been verified. Click "Generate Certificate" below to create your blockchain-verified NFT certificate.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center space-x-8 mt-8 text-sm text-slate-400">
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-4 h-4" />
+                        <span>Blockchain Secured</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Verified className="w-4 h-4" />
+                        <span>NFT Certificate</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Globe className="w-4 h-4" />
+                        <span>Globally Verified</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="absolute top-0 left-0 w-full h-full opacity-10">
-              <div className="absolute top-8 left-8">
-                <Crown className="w-24 h-24" />
-              </div>
-              <div className="absolute bottom-8 right-8">
-                <Medal className="w-32 h-32" />
-              </div>
-            </div>
-            
-            <div className="relative z-10 text-center">
-              <div className="mb-8">
-                <Sparkles className="w-12 h-12 mx-auto mb-4" />
-                <h2 className="text-4xl font-bold mb-2">Certificate of Completion</h2>
-                <p className="text-blue-100">This certifies that</p>
-              </div>
-              
-              <div className="mb-8">
-                <h3 className="text-5xl font-bold mb-4">{certificateData.studentName}</h3>
-                <p className="text-xl text-blue-100">has successfully completed</p>
-              </div>
-              
-              <div className="mb-8">
-                <h4 className="text-3xl font-semibold mb-2">{certificateData.courseTitle}</h4>
-                <p className="text-lg text-blue-100">with a grade of <span className="font-bold">{certificateData.grade}</span></p>
-              </div>
-              
-              <div className="flex items-center justify-center space-x-12 mb-8">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{certificateData.score}%</div>
-                  <div className="text-sm text-blue-200">Final Score</div>
+          ) : (
+            /* Generated Certificate */
+            <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 p-12 text-white">
+              {/* Congratulations Animation Overlay */}
+              {showCongratulations && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-red-500/20 backdrop-blur-sm">
+                  <div className="text-center space-y-6 animate-celebrate">
+                    <div className="relative">
+                      <div className="text-8xl mb-4 animate-bounce">🎉</div>
+                      <div className="absolute -top-4 -left-4 text-3xl animate-sparkle">✨</div>
+                      <div className="absolute -top-4 -right-4 text-3xl animate-sparkle" style={{ animationDelay: '0.5s' }}>�</div>
+                    </div>
+                    <div className="space-y-4">
+                      <h2 className="text-5xl font-bold text-white animate-glow">Congratulations!</h2>
+                      <p className="text-2xl text-white/95 font-semibold">Your NFT Certificate has been generated!</p>
+                      <div className="flex items-center justify-center space-x-2 text-lg text-white/90">
+                        <Shield className="w-5 h-5" />
+                        <span>Blockchain Verified</span>
+                        <Verified className="w-5 h-5" />
+                        <span>Permanently Yours</span>
+                      </div>
+                    </div>
+                    
+                    {/* Enhanced floating celebration elements */}
+                    <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+                      <div className="absolute top-10 left-10 text-3xl animate-confetti">🎊</div>
+                      <div className="absolute top-20 right-10 text-3xl animate-confetti" style={{ animationDelay: '0.3s' }}>✨</div>
+                      <div className="absolute bottom-20 left-20 text-3xl animate-confetti" style={{ animationDelay: '0.6s' }}>🎁</div>
+                      <div className="absolute bottom-10 right-20 text-3xl animate-confetti" style={{ animationDelay: '0.9s' }}>🏆</div>
+                      <div className="absolute top-1/2 left-1/4 text-3xl animate-confetti" style={{ animationDelay: '0.2s' }}>💎</div>
+                      <div className="absolute top-1/3 right-1/4 text-3xl animate-confetti" style={{ animationDelay: '0.7s' }}>�</div>
+                      <div className="absolute top-3/4 left-1/3 text-2xl animate-confetti" style={{ animationDelay: '0.4s' }}>🎈</div>
+                      <div className="absolute top-1/4 right-1/3 text-2xl animate-confetti" style={{ animationDelay: '0.8s' }}>�</div>
+                      <div className="absolute bottom-1/4 left-3/4 text-2xl animate-confetti" style={{ animationDelay: '0.5s' }}>🎭</div>
+                      <div className="absolute bottom-1/3 right-1/2 text-2xl animate-confetti" style={{ animationDelay: '1s' }}>�</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{certificateData.duration}</div>
-                  <div className="text-sm text-blue-200">Duration</div>
+              )}
+              
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-white/20 text-white animate-pulse">NFT Certificate</Badge>
+              </div>
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-8 left-8">
+                  <Crown className="w-24 h-24" />
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{new Date(certificateData.completionDate).toLocaleDateString()}</div>
-                  <div className="text-sm text-blue-200">Completion Date</div>
+                <div className="absolute bottom-8 right-8">
+                  <Medal className="w-32 h-32" />
                 </div>
               </div>
               
-              <div className="border-t border-white/20 pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="text-left">
-                    <div className="font-semibold">{certificateData.instructor}</div>
-                    <div className="text-sm text-blue-200">Course Instructor</div>
+              <div className="relative z-10 text-center">
+                <div className="mb-8">
+                  <Sparkles className="w-12 h-12 mx-auto mb-4" />
+                  <h2 className="text-4xl font-bold mb-2">Certificate of Completion</h2>
+                  <p className="text-blue-100">This certifies that</p>
+                </div>
+                
+                <div className="mb-8">
+                  <h3 className="text-5xl font-bold mb-4">{certificateData.studentName}</h3>
+                  <p className="text-xl text-blue-100">has successfully completed</p>
+                </div>
+                
+                <div className="mb-8">
+                  <h4 className="text-3xl font-semibold mb-2">{certificateData.courseTitle}</h4>
+                  <p className="text-lg text-blue-100">with a grade of <span className="font-bold">{certificateData.grade}</span></p>
+                </div>
+                
+                <div className="flex items-center justify-center space-x-12 mb-8">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{certificateData.score}%</div>
+                    <div className="text-sm text-blue-200">Final Score</div>
                   </div>
                   <div className="text-center">
-                    <Verified className="w-8 h-8 mx-auto mb-1" />
-                    <div className="text-xs text-blue-200">Blockchain Verified</div>
+                    <div className="text-2xl font-bold">{certificateData.duration}</div>
+                    <div className="text-sm text-blue-200">Duration</div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold">{certificateData.issuingOrganization}</div>
-                    <div className="text-sm text-blue-200">Issuing Authority</div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{new Date(certificateData.completionDate).toLocaleDateString()}</div>
+                    <div className="text-sm text-blue-200">Completion Date</div>
+                  </div>
+                </div>
+                
+                <div className="border-t border-white/20 pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <div className="font-semibold">{certificateData.instructor}</div>
+                      <div className="text-sm text-blue-200">Course Instructor</div>
+                    </div>
+                    <div className="text-center">
+                      <Verified className="w-8 h-8 mx-auto mb-1" />
+                      <div className="text-xs text-blue-200">Blockchain Verified</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold">{certificateData.issuingOrganization}</div>
+                      <div className="text-sm text-blue-200">Issuing Authority</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Main Content */}
@@ -353,12 +459,17 @@ export default function GetCertificate() {
                   <Button 
                     className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
                     onClick={handleGenerateCertificate}
-                    disabled={!certificateData.isEligible || isGenerating}
+                    disabled={!certificateData.isEligible || isGenerating || certificateGenerated}
                   >
                     {isGenerating ? (
                       <>
-                        <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Generating Certificate...
+                      </>
+                    ) : certificateGenerated ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Certificate Generated
                       </>
                     ) : (
                       <>
@@ -410,23 +521,27 @@ export default function GetCertificate() {
                         description: `Your ${certificateData.courseTitle} certificate has been downloaded successfully.`,
                       });
                     }}
-                    disabled={!certificateData.isEligible}
+                    disabled={!certificateGenerated}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download Certificate
                   </Button>
                   
-                  <Button variant="outline" className="w-full" onClick={shareCredential}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={shareCredential}
+                    disabled={!certificateGenerated}
+                  >
                     <Share2 className="w-4 h-4 mr-2" />
                     Share Credential
                   </Button>
                   
-                  <Button variant="outline" className="w-full">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Preview Certificate
-                  </Button>
-                  
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    disabled={!certificateGenerated}
+                  >
                     <Wallet className="w-4 h-4 mr-2" />
                     Add to Wallet
                   </Button>
