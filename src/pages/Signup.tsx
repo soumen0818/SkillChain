@@ -6,27 +6,60 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, Loader2, Wallet } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+// Define ethereum on window
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [role, setRole] = useState<UserRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  
+
   const { signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const handleConnectWallet = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setWalletAddress(accounts[0]);
+        toast({
+          title: "Wallet Connected",
+          description: "Your wallet has been successfully connected.",
+        });
+      } catch (error) {
+        toast({
+          title: "Wallet Connection Failed",
+          description: "Could not connect to your wallet. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "MetaMask not found",
+        description: "Please install MetaMask to connect your wallet.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -45,18 +78,26 @@ export default function Signup() {
       return;
     }
 
+    if (!walletAddress) {
+      toast({
+        title: "Connect Wallet",
+        description: "Please connect your wallet to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const success = await signup(email, password, name, role);
-      
+      const success = await signup(name, email, password, walletAddress, role);
+
       if (success) {
         toast({
           title: "Account created!",
           description: "Welcome to SkillChain! Your account has been created successfully.",
         });
-        
-        // Redirect based on role
+
         const redirectPath = role === 'student' ? '/student/dashboard' : '/teacher/dashboard';
         navigate(redirectPath);
       } else {
@@ -198,6 +239,22 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Wallet Connect */}
+            <div className="space-y-2">
+              <Label>Wallet</Label>
+              {walletAddress ? (
+                <div className="flex items-center justify-between h-12 px-4 border rounded-md bg-muted">
+                  <p className="truncate text-sm text-muted-foreground">{walletAddress}</p>
+                  <Button variant="ghost" size="sm" onClick={handleConnectWallet}>Change</Button>
+                </div>
+              ) : (
+                <Button type="button" className="w-full h-12" variant="outline" onClick={handleConnectWallet}>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
+                </Button>
+              )}
+            </div>
+
             {/* Terms and Conditions */}
             <div className="flex items-start space-x-2">
               <input
@@ -220,9 +277,9 @@ export default function Signup() {
             </div>
 
             {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full h-12 gradient-primary" 
+            <Button
+              type="submit"
+              className="w-full h-12 gradient-primary"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -247,7 +304,7 @@ export default function Signup() {
           </p>
         </div>
 
-        
+
       </div>
     </div>
   );
