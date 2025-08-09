@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -24,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
   const stats = [
@@ -140,7 +142,13 @@ export default function StudentDashboard() {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold">Continue Learning</h3>
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => navigate('/my-courses')}
+                  >
+                    View All
+                  </Button>
                 </div>
                 <div className="space-y-4">
                   {courses.slice(0, 2).map((course) => (
@@ -158,7 +166,11 @@ export default function StudentDashboard() {
                           <span className="text-sm text-muted-foreground">{course.progress}%</span>
                         </div>
                       </div>
-                      <Button size="sm" className="gradient-primary">
+                      <Button 
+                        size="sm" 
+                        className="gradient-primary"
+                        onClick={() => navigate(`/course-study/${course.id}`)}
+                      >
                         <PlayCircle className="w-4 h-4 mr-2" />
                         Continue
                       </Button>
@@ -237,7 +249,10 @@ export default function StudentDashboard() {
           <TabsContent value="courses" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My Courses</h3>
-              <Button className="gradient-primary">
+              <Button 
+                className="gradient-primary"
+                onClick={() => navigate('/browse-courses')}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Browse Courses
               </Button>
@@ -266,7 +281,10 @@ export default function StudentDashboard() {
                         <p className="text-sm font-medium">Next Lesson:</p>
                         <p className="text-sm text-muted-foreground">{course.nextLesson}</p>
                       </div>
-                      <Button className="w-full gradient-primary">
+                      <Button 
+                        className="w-full gradient-primary"
+                        onClick={() => navigate(`/course-study/${course.id}`)}
+                      >
                         <PlayCircle className="w-4 h-4 mr-2" />
                         Continue Learning
                       </Button>
