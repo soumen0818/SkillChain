@@ -178,13 +178,15 @@ export default function StudentDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <Card key={index} className="p-6 hover:shadow-elevation animate-smooth">
+            <Card key={index} className="p-6 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 transform transition-all duration-300 cursor-pointer group border-0 bg-gradient-to-br from-white to-gray-50/80 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-muted-foreground text-sm">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="text-muted-foreground text-sm group-hover:text-primary/80 transition-colors duration-300">{stat.label}</p>
+                  <p className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">{stat.value}</p>
                 </div>
-                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                <div className="transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                  <stat.icon className={`w-8 h-8 ${stat.color} group-hover:drop-shadow-lg`} />
+                </div>
               </div>
             </Card>
           ))}
@@ -202,41 +204,42 @@ export default function StudentDashboard() {
           <TabsContent value="overview" className="space-y-8">
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Continue Learning */}
-              <Card className="p-6">
+              <Card className="p-6 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transform transition-all duration-300 border-0 bg-gradient-to-br from-white to-blue-50/30">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold">Continue Learning</h3>
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => navigate('/my-learning-journey')}
+                    className="hover:bg-blue-100 hover:text-blue-700 hover:scale-105 transition-all duration-300 hover:shadow-md"
                   >
                     View All
                   </Button>
                 </div>
                 <div className="space-y-4">
                   {courses.slice(0, 2).map((course) => (
-                    <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
-                      <div className="relative">
+                    <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:shadow-lg hover:-translate-y-0.5 transform transition-all duration-300 cursor-pointer group">
+                      <div className="relative group-hover:scale-105 transition-transform duration-300">
                         <img 
                           src={course.thumbnail} 
                           alt={course.title}
-                          className="w-16 h-16 rounded-lg object-cover"
+                          className="w-16 h-16 rounded-lg object-cover shadow-sm group-hover:shadow-md transition-shadow duration-300"
                         />
                         <div className="absolute -top-1 -right-1">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                            'bg-pink-100 text-pink-800'
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium transition-all duration-300 group-hover:scale-110 ${
+                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200' :
+                            course.category === 'web3' ? 'bg-green-100 text-green-800 group-hover:bg-green-200' :
+                            course.category === 'nft' ? 'bg-purple-100 text-purple-800 group-hover:bg-purple-200' :
+                            course.category === 'defi' ? 'bg-orange-100 text-orange-800 group-hover:bg-orange-200' :
+                            course.category === 'trading' ? 'bg-red-100 text-red-800 group-hover:bg-red-200' :
+                            'bg-pink-100 text-pink-800 group-hover:bg-pink-200'
                           }`}>
                             {course.category}
                           </span>
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold">{course.title}</h4>
+                        <h4 className="font-semibold group-hover:text-primary transition-colors duration-300">{course.title}</h4>
                         <p className="text-sm text-muted-foreground">{course.instructor}</p>
                         <p className="text-xs text-muted-foreground mb-2">
                           Module {Math.ceil((course.progress / 100) * course.totalModules)}/{course.totalModules} • {course.currentModule}
@@ -247,7 +250,7 @@ export default function StudentDashboard() {
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
                           {course.topics.slice(0, 2).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            <span key={index} className="text-xs bg-muted px-1.5 py-0.5 rounded group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
                               {topic}
                             </span>
                           ))}
@@ -255,10 +258,10 @@ export default function StudentDashboard() {
                       </div>
                       <Button 
                         size="sm" 
-                        className="gradient-primary"
+                        className="gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5"
                         onClick={() => navigate(`/course-study/${course.id}`)}
                       >
-                        <PlayCircle className="w-4 h-4 mr-2" />
+                        <PlayCircle className="w-4 h-4 mr-2 group-hover:animate-pulse" />
                         Continue
                       </Button>
                     </div>
@@ -267,112 +270,112 @@ export default function StudentDashboard() {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="p-6">
+              <Card className="p-6 hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1 transform transition-all duration-300 border-0 bg-gradient-to-br from-white to-green-50/30">
                 <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <Trophy className="w-5 h-5 text-green-600" />
+                  <div className="flex items-center space-x-4 hover:bg-green-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 group-hover:scale-110 transition-all duration-300">
+                      <Trophy className="w-5 h-5 text-green-600 group-hover:animate-bounce" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">Certificate Earned</p>
+                      <p className="font-medium group-hover:text-green-700 transition-colors duration-300">Certificate Earned</p>
                       <p className="text-sm text-muted-foreground">NFT Art Creation - Advanced Level</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">2h ago</span>
+                    <span className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">2h ago</span>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                      <Coins className="w-5 h-5 text-primary" />
+                  <div className="flex items-center space-x-4 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
+                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center group-hover:bg-primary/30 group-hover:scale-110 transition-all duration-300">
+                      <Coins className="w-5 h-5 text-primary group-hover:animate-spin" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">SkillTokens Earned</p>
+                      <p className="font-medium group-hover:text-primary transition-colors duration-300">SkillTokens Earned</p>
                       <p className="text-sm text-muted-foreground">+250 ST for completing module</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">1d ago</span>
+                    <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors duration-300">1d ago</span>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-blue-600" />
+                  <div className="flex items-center space-x-4 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 group-hover:scale-110 transition-all duration-300">
+                      <BookOpen className="w-5 h-5 text-blue-600 group-hover:animate-pulse" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">New Course Enrolled</p>
+                      <p className="font-medium group-hover:text-blue-700 transition-colors duration-300">New Course Enrolled</p>
                       <p className="text-sm text-muted-foreground">Advanced Smart Contract Security</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">3d ago</span>
+                    <span className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">3d ago</span>
                   </div>
                 </div>
               </Card>
             </div>
 
             {/* Skill Progress Chart */}
-            <Card className="p-6">
+            <Card className="p-6 hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1 transform transition-all duration-300 border-0 bg-gradient-to-br from-white to-purple-50/30">
               <h3 className="text-xl font-semibold mb-6">Learning Progress by Category</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-blue-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-blue-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       Blockchain Development
                     </span>
-                    <span className="text-sm text-muted-foreground">75%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">75%</span>
                   </div>
-                  <Progress value={75} />
-                  <p className="text-xs text-muted-foreground">Smart Contracts, DeFi, Consensus</p>
+                  <Progress value={75} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Smart Contracts, DeFi, Consensus</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-green-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       Web3 Development
                     </span>
-                    <span className="text-sm text-muted-foreground">45%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-green-600 transition-colors duration-300">45%</span>
                   </div>
-                  <Progress value={45} />
-                  <p className="text-xs text-muted-foreground">React, Web3.js, DApp Frontend</p>
+                  <Progress value={45} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">React, Web3.js, DApp Frontend</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-purple-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-purple-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       NFT & Digital Art
                     </span>
-                    <span className="text-sm text-muted-foreground">90%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-purple-600 transition-colors duration-300">90%</span>
                   </div>
-                  <Progress value={90} />
-                  <p className="text-xs text-muted-foreground">Art Creation, Minting, Metadata</p>
+                  <Progress value={90} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-purple-600 transition-colors duration-300">Art Creation, Minting, Metadata</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-orange-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-orange-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       DeFi Protocols
                     </span>
-                    <span className="text-sm text-muted-foreground">30%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">30%</span>
                   </div>
-                  <Progress value={30} />
-                  <p className="text-xs text-muted-foreground">Yield Farming, AMM, Liquidity</p>
+                  <Progress value={30} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">Yield Farming, AMM, Liquidity</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-red-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       Trading & Analytics
                     </span>
-                    <span className="text-sm text-muted-foreground">60%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-red-600 transition-colors duration-300">60%</span>
                   </div>
-                  <Progress value={60} />
-                  <p className="text-xs text-muted-foreground">Technical Analysis, Risk Management</p>
+                  <Progress value={60} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-red-600 transition-colors duration-300">Technical Analysis, Risk Management</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 group hover:bg-pink-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-pink-500 rounded-full mr-2"></span>
+                      <span className="w-3 h-3 bg-pink-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
                       Metaverse Development
                     </span>
-                    <span className="text-sm text-muted-foreground">85%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-pink-600 transition-colors duration-300">85%</span>
                   </div>
-                  <Progress value={85} />
-                  <p className="text-xs text-muted-foreground">3D Modeling, VR/AR, Virtual Worlds</p>
+                  <Progress value={85} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-pink-600 transition-colors duration-300">3D Modeling, VR/AR, Virtual Worlds</p>
                 </div>
               </div>
             </Card>
@@ -382,49 +385,50 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My Courses</h3>
               <Button 
-                className="gradient-primary"
+                className="gradient-primary hover:shadow-2xl hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-1"
                 onClick={() => navigate('/browse-courses')}
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                 Browse Courses
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.slice(0, 3).map((course) => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                  <div className="relative">
+                <Card key={course.id} className="overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transform transition-all duration-300 group border-0 bg-gradient-to-br from-white to-gray-50">
+                  <div className="relative overflow-hidden">
                     <img 
                       src={course.thumbnail} 
                       alt={course.title}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="absolute top-4 right-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 group-hover:scale-110 ${
+                        course.category === 'blockchain' ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200' :
+                        course.category === 'web3' ? 'bg-green-100 text-green-800 group-hover:bg-green-200' :
+                        course.category === 'nft' ? 'bg-purple-100 text-purple-800 group-hover:bg-purple-200' :
+                        course.category === 'defi' ? 'bg-orange-100 text-orange-800 group-hover:bg-orange-200' :
+                        course.category === 'trading' ? 'bg-red-100 text-red-800 group-hover:bg-red-200' :
+                        'bg-pink-100 text-pink-800 group-hover:bg-pink-200'
                       }`}>
                         {course.category.toUpperCase()}
                       </span>
                     </div>
                   </div>
                   <div className="p-6">
-                    <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
+                    <h4 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors duration-300">{course.title}</h4>
                     <p className="text-muted-foreground text-sm mb-3">{course.instructor}</p>
                     <p className="text-xs text-muted-foreground mb-4">{course.skillLevel}</p>
                     
                     <div className="space-y-4">
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <Clock className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                           <span>{course.duration}</span>
                         </div>
                         <span className="text-primary font-medium">{course.progress}% complete</span>
                       </div>
-                      <Progress value={course.progress} />
+                      <Progress value={course.progress} className="group-hover:scale-105 transition-transform duration-300" />
                       
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Current Module:</p>
@@ -440,7 +444,7 @@ export default function StudentDashboard() {
                         <p className="text-sm font-medium">Key Topics:</p>
                         <div className="flex flex-wrap gap-1">
                           {course.topics.slice(0, 3).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-2 py-1 rounded">
+                            <span key={index} className="text-xs bg-muted px-2 py-1 rounded group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
                               {topic}
                             </span>
                           ))}
@@ -451,10 +455,10 @@ export default function StudentDashboard() {
                       </div>
                       
                       <Button 
-                        className="w-full gradient-primary"
+                        className="w-full gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5 group/btn"
                         onClick={() => navigate(`/course-study/${course.id}`)}
                       >
-                        <PlayCircle className="w-4 h-4 mr-2" />
+                        <PlayCircle className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                         Continue Learning
                       </Button>
                     </div>
@@ -467,8 +471,11 @@ export default function StudentDashboard() {
           <TabsContent value="certificates" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My NFT Certificates</h3>
-              <Button variant="outline">
-                <Wallet className="w-4 h-4 mr-2" />
+              <Button 
+                variant="outline"
+                className="hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5 group"
+              >
+                <Wallet className="w-4 h-4 mr-2 group-hover:animate-pulse" />
                 View in Wallet
               </Button>
             </div>
@@ -476,36 +483,36 @@ export default function StudentDashboard() {
               {certificates.map((cert) => {
                 const isListed = getActiveListing(cert.id.toString());
                 return (
-                <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
+                <Card key={cert.id} className="p-6 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 transform transition-all duration-300 group relative border-0 bg-gradient-to-br from-primary/5 to-secondary/5">
                   {isListed && (
-                    <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                      <ShoppingCart className="w-3 h-3 mr-1" />
+                    <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center group-hover:scale-110 transition-transform duration-300">
+                      <ShoppingCart className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                       Listed for Sale
                     </div>
                   )}
                   <div className="flex items-start justify-between mb-4">
-                    <Award className="w-12 h-12 text-primary" />
+                    <Award className="w-12 h-12 text-primary group-hover:text-primary/80 group-hover:rotate-12 transition-all duration-300" />
                     <div className="flex flex-col items-end space-y-1">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        cert.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        cert.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded group-hover:bg-primary/20 group-hover:scale-105 transition-all duration-300">NFT</span>
+                      <span className={`text-xs px-2 py-1 rounded transition-all duration-300 group-hover:scale-105 ${
+                        cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200' :
+                        cert.category === 'web3' ? 'bg-green-100 text-green-800 group-hover:bg-green-200' :
+                        cert.category === 'nft' ? 'bg-purple-100 text-purple-800 group-hover:bg-purple-200' :
+                        cert.category === 'defi' ? 'bg-orange-100 text-orange-800 group-hover:bg-orange-200' :
+                        cert.category === 'trading' ? 'bg-red-100 text-red-800 group-hover:bg-red-200' :
+                        'bg-pink-100 text-pink-800 group-hover:bg-pink-200'
                       }`}>
                         {cert.category}
                       </span>
                     </div>
                   </div>
-                  <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
+                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors duration-300">{cert.title}</h4>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Token ID: {cert.tokenId}</p>
+                    <p>Token ID: <span className="font-mono group-hover:text-foreground transition-colors duration-300">{cert.tokenId}</span></p>
                     <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
-                    <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                    <p className="font-medium text-foreground group-hover:text-primary transition-colors duration-300">Market Value: {cert.value}</p>
                     {isListed && (
-                      <p className="font-medium text-green-600">
+                      <p className="font-medium text-green-600 group-hover:text-green-700 transition-colors duration-300">
                         Listed for: {isListed.price} {isListed.currency}
                       </p>
                     )}
@@ -514,19 +521,23 @@ export default function StudentDashboard() {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1"
+                      className="flex-1 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
                       onClick={() => navigate(`/verify-certificate/${cert.id}`)}
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                       Verify
                     </Button>
                     <Button 
                       size="sm" 
-                      className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
+                      className={`flex-1 transform transition-all duration-300 group/btn ${
+                        isListed 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105'
+                      }`}
                       onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
                       disabled={!!isListed}
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                       {isListed ? 'Listed' : 'List for Sale'}
                     </Button>
                   </div>
@@ -553,12 +564,16 @@ export default function StudentDashboard() {
                 <Button 
                   variant={showMyListings ? "default" : "outline"}
                   onClick={() => setShowMyListings(!showMyListings)}
+                  className="hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5 group"
                 >
-                  <Users className="w-4 h-4 mr-2" />
+                  <Users className="w-4 h-4 mr-2 group-hover:animate-pulse" />
                   {showMyListings ? 'View All' : 'My Listings'}
                 </Button>
-                <Button className="gradient-primary" onClick={() => navigate('/list-certificate/new')}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <Button 
+                  className="gradient-primary hover:shadow-2xl hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-1"
+                  onClick={() => navigate('/list-certificate/new')}
+                >
+                  <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                   List Certificate
                 </Button>
               </div>
@@ -577,42 +592,45 @@ export default function StudentDashboard() {
                     }
                   </p>
                   {showMyListings && (
-                    <Button className="gradient-primary" onClick={() => navigate('/list-certificate/new')}>
-                      <Plus className="w-4 h-4 mr-2" />
+                    <Button 
+                      className="gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5"
+                      onClick={() => navigate('/list-certificate/new')}
+                    >
+                      <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                       List Your First Certificate
                     </Button>
                   )}
                 </div>
               ) : (
                 displayedListings.map((item) => (
-                  <Card key={item.id} className="p-6 hover:shadow-elevation animate-smooth relative group">
+                  <Card key={item.id} className="p-6 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 transform transition-all duration-300 group relative border-0 bg-gradient-to-br from-white to-gray-50">
                     {/* Seller badge for owned listings */}
                     {item.seller === user?.username && (
-                      <div className="absolute top-3 right-3 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                        <Star className="w-3 h-3 mr-1" />
+                      <div className="absolute top-3 right-3 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center group-hover:scale-110 transition-transform duration-300">
+                        <Star className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                         Your Listing
                       </div>
                     )}
                     
                     <div className="flex items-start justify-between mb-4">
-                      <Trophy className="w-12 h-12 text-primary" />
+                      <Trophy className="w-12 h-12 text-primary group-hover:text-primary/80 group-hover:rotate-12 transition-all duration-300" />
                       <div className="text-right">
-                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
-                          item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                          item.category === 'web3' ? 'bg-green-100 text-green-800' :
-                          item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                          item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                          item.category === 'trading' ? 'bg-red-100 text-red-800' :
-                          'bg-pink-100 text-pink-800'
+                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 transition-all duration-300 group-hover:scale-105 ${
+                          item.category === 'blockchain' ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200' :
+                          item.category === 'web3' ? 'bg-green-100 text-green-800 group-hover:bg-green-200' :
+                          item.category === 'nft' ? 'bg-purple-100 text-purple-800 group-hover:bg-purple-200' :
+                          item.category === 'defi' ? 'bg-orange-100 text-orange-800 group-hover:bg-orange-200' :
+                          item.category === 'trading' ? 'bg-red-100 text-red-800 group-hover:bg-red-200' :
+                          'bg-pink-100 text-pink-800 group-hover:bg-pink-200'
                         }`}>
                           {item.category}
                         </span>
                         <div>
-                          <p className="text-lg font-bold text-foreground">
+                          <p className="text-lg font-bold text-foreground group-hover:text-primary transition-colors duration-300">
                             {item.price} {item.currency}
                           </p>
                           {item.alternativePrice && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">
                               or {item.alternativePrice} {item.alternativeCurrency}
                             </p>
                           )}
@@ -620,18 +638,18 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                     
-                    <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
+                    <h4 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors duration-300">{item.title}</h4>
                     <div className="space-y-1 text-sm text-muted-foreground mb-4">
-                      <p>Seller: {item.seller}</p>
-                      <p>Issuer: {item.issuer}</p>
-                      <p>Grade: <span className="font-medium text-foreground">{item.grade}</span></p>
+                      <p>Seller: <span className="group-hover:text-foreground transition-colors duration-300">{item.seller}</span></p>
+                      <p>Issuer: <span className="group-hover:text-foreground transition-colors duration-300">{item.issuer}</span></p>
+                      <p>Grade: <span className="font-medium text-foreground group-hover:text-primary transition-colors duration-300">{item.grade}</span></p>
                       <div className="flex items-center justify-between">
                         <span>Rarity:</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
-                          item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
-                          item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
-                          'bg-yellow-100 text-yellow-800'
+                        <span className={`px-2 py-1 rounded text-xs transition-all duration-300 group-hover:scale-105 ${
+                          item.rarity === 'Common' ? 'bg-gray-100 text-gray-800 group-hover:bg-gray-200' :
+                          item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200' :
+                          item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800 group-hover:bg-purple-200' :
+                          'bg-yellow-100 text-yellow-800 group-hover:bg-yellow-200'
                         }`}>
                           {item.rarity}
                         </span>
@@ -640,38 +658,65 @@ export default function StudentDashboard() {
                     
                     <div className="flex space-x-2">
                       {item.seller === user?.username ? (
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Settings className="w-4 h-4 mr-2" />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
+                        >
+                          <Settings className="w-4 h-4 mr-2 group-hover/btn:animate-spin" />
                           Manage
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Eye className="w-4 h-4 mr-2" />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
+                          onClick={() => navigate(`/certificate-details/${item.id}`)}
+                        >
+                          <Eye className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                           View Details
                         </Button>
                       )}
                       
                       {item.seller !== user?.username ? (
-                        <Button size="sm" className="flex-1 gradient-primary">
-                          <ShoppingCart className="w-4 h-4 mr-2" />
+                        <Button 
+                          size="sm" 
+                          className="flex-1 gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
+                          onClick={() => navigate('/wallet', { 
+                            state: { 
+                              purchaseData: {
+                                certificateId: item.id,
+                                title: item.title,
+                                price: item.price,
+                                currency: item.currency,
+                                seller: item.seller
+                              }
+                            }
+                          })}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:animate-bounce" />
                           Buy Now
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Share2 className="w-4 h-4 mr-2" />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 hover:bg-secondary hover:text-secondary-foreground hover:shadow-lg hover:shadow-secondary/30 hover:scale-105 transform transition-all duration-300 group/btn"
+                        >
+                          <Share2 className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                           Share
                         </Button>
                       )}
                     </div>
                     
                     {/* Market stats */}
-                    <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="mt-4 pt-4 border-t border-gray-100 group-hover:border-primary/20 transition-colors duration-300">
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span className="flex items-center">
-                          <Eye className="w-3 h-3 mr-1" />
+                        <span className="flex items-center group-hover:text-foreground transition-colors duration-300">
+                          <Eye className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                           {item.views} views
                         </span>
-                        <span className="flex items-center">
+                        <span className="flex items-center group-hover:text-foreground transition-colors duration-300">
                           <Clock className="w-3 h-3 mr-1" />
                           {Math.floor((Date.now() - new Date(item.listingDate).getTime()) / (1000 * 60 * 60 * 24))}d ago
                         </span>
