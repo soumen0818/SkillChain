@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CourseProvider } from "@/contexts/CourseContext";
 import { Navbar } from "@/components/Navbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
@@ -11,6 +12,12 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import CreateCourse from "./pages/CreateCourse";
+import CourseManagement from "./pages/CourseManagement";
+import EditCourse from "./pages/EditCourse";
+import CourseAnalytics from "./pages/CourseAnalytics";
+import CourseSettings from "./pages/CourseSettings";
+import CoursePreview from "./pages/CoursePreview";
 import Courses from "./pages/Courses";
 import Marketplace from "./pages/Marketplace";
 import About from "./pages/About";
@@ -23,11 +30,12 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Navbar />
-          <Routes>
+        <CourseProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Navbar />
+            <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -42,10 +50,73 @@ const App = () => (
             />
 
             <Route
+              path="/teacher-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/teacher/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['teacher']}>
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/create-course"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <CreateCourse />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/course-management/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <CourseManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/edit-course/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <EditCourse />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/course-analytics/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <CourseAnalytics />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/course-settings/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <CourseSettings />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/course-preview/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <CoursePreview />
                 </ProtectedRoute>
               }
             />
@@ -62,9 +133,10 @@ const App = () => (
           </Routes>
           <Footer />
         </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </CourseProvider>
+    </AuthProvider>
+  </TooltipProvider>
+</QueryClientProvider>
 );
 
 export default App;

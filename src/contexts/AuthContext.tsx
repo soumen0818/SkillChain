@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // For demo purposes, accept any email/password
     if (email && password) {
       const newUser: User = {
-        id: Date.now().toString(),
+        id: role === 'teacher' ? 'teacher1' : `${role}_${Date.now()}`,
         email,
         name: email.split('@')[0],
         role,
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // For demo purposes, accept any valid inputs
     if (email && password && name) {
       const newUser: User = {
-        id: Date.now().toString(),
+        id: role === 'teacher' ? 'teacher1' : `${role}_${Date.now()}`,
         email,
         name,
         role,
