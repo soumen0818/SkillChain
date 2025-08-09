@@ -15,7 +15,7 @@ export default function Login() {
   const [role, setRole] = useState<UserRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -26,13 +26,13 @@ export default function Login() {
 
     try {
       const success = await login(email, password, role);
-      
+
       if (success) {
         toast({
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
-        
+
         // Redirect based on role
         const redirectPath = role === 'student' ? '/student/dashboard' : '/teacher/dashboard';
         navigate(redirectPath);
@@ -52,9 +52,7 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  return (
+  }; return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
@@ -150,9 +148,9 @@ export default function Login() {
             </div>
 
             {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full h-12 gradient-primary" 
+            <Button
+              type="submit"
+              className="w-full h-12 gradient-primary"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -177,7 +175,7 @@ export default function Login() {
           </p>
         </div>
 
-      
+
       </div>
     </div>
   );
