@@ -148,15 +148,27 @@ export default function TeacherDashboard() {
                     <Plus className="w-5 h-5" />
                     <span>Create Course</span>
                   </Button>
-                  <Button variant="outline" className="h-16 flex-col space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="h-16 flex-col space-y-2"
+                    onClick={() => navigate('/upload-content')}
+                  >
                     <Upload className="w-5 h-5" />
                     <span>Upload Content</span>
                   </Button>
-                  <Button variant="outline" className="h-16 flex-col space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="h-16 flex-col space-y-2"
+                    onClick={() => navigate('/issue-certificate')}
+                  >
                     <Award className="w-5 h-5" />
                     <span>Issue Certificate</span>
                   </Button>
-                  <Button variant="outline" className="h-16 flex-col space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="h-16 flex-col space-y-2"
+                    onClick={() => navigate('/teacher-analytics')}
+                  >
                     <BarChart3 className="w-5 h-5" />
                     <span>View Analytics</span>
                   </Button>
@@ -426,7 +438,10 @@ export default function TeacherDashboard() {
           <TabsContent value="certificates" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">Certificate Management</h3>
-              <Button className="gradient-primary">
+              <Button 
+                className="gradient-primary"
+                onClick={() => navigate('/issue-certificate')}
+              >
                 <Award className="w-4 h-4 mr-2" />
                 Issue Certificate
               </Button>

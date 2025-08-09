@@ -13,6 +13,9 @@ import Signup from "./pages/Signup";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import CreateCourse from "./pages/CreateCourse";
+import UploadContent from "./pages/UploadContent";
+import IssueCertificate from "./pages/IssueCertificate";
+import TeacherAnalytics from "./pages/TeacherAnalytics";
 import CourseManagement from "./pages/CourseManagement";
 import EditCourse from "./pages/EditCourse";
 import CourseAnalytics from "./pages/CourseAnalytics";
@@ -72,6 +75,33 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['teacher']}>
                   <CreateCourse />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/upload-content"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <UploadContent />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/issue-certificate"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <IssueCertificate />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/teacher-analytics"
+              element={
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TeacherAnalytics />
                 </ProtectedRoute>
               }
             />

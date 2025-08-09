@@ -26,6 +26,7 @@ export interface Course {
   enrollmentTrend: string;
   createdAt: string;
   teacherId: string;
+  curriculum?: any[]; // Course curriculum/modules
 }
 
 interface CourseContextType {
