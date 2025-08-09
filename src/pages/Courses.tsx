@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,73 +7,122 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SEO from '@/components/SEO';
-import { BookOpen, Clock, Star, Users, Award } from 'lucide-react';
-
-interface Course {
-  id: number;
-  title: string;
-  instructor: string;
-  duration: string;
-  rating: number;
-  students: number;
-  category: 'blockchain' | 'smart-contracts' | 'defi' | 'nft' | 'dao';
-  thumbnail: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-}
-
-const allCourses: Course[] = [
-  { id: 1, title: 'Blockchain Fundamentals', instructor: 'Dr. Sarah Johnson', duration: '8 weeks', rating: 4.8, students: 1200, category: 'blockchain', level: 'Beginner', thumbnail: 'https://images.unsplash.com/photo-1518779578993-ec3579fee39f?w=800&auto=format&fit=crop&q=60' },
-  { id: 2, title: 'Smart Contracts with Solidity', instructor: 'Mark Thompson', duration: '10 weeks', rating: 4.9, students: 950, category: 'smart-contracts', level: 'Intermediate', thumbnail: 'https://images.unsplash.com/photo-1555255707-c07966088b7b?w=800&auto=format&fit=crop&q=60' },
-  { id: 3, title: 'DeFi Protocols and Yield Farming', instructor: 'Priya Patel', duration: '6 weeks', rating: 4.7, students: 800, category: 'defi', level: 'Advanced', thumbnail: 'https://images.unsplash.com/photo-1616077168079-7e09a6772e65?w=800&auto=format&fit=crop&q=60' },
-  { id: 4, title: 'Create and Mint NFT Collections', instructor: 'Lisa Chen', duration: '5 weeks', rating: 4.6, students: 1020, category: 'nft', level: 'Beginner', thumbnail: 'https://images.unsplash.com/photo-1620207418302-439b387441b0?w=800&auto=format&fit=crop&q=60' },
-  { id: 5, title: 'DAO Governance Design', instructor: 'Ethan Brown', duration: '7 weeks', rating: 4.8, students: 640, category: 'dao', level: 'Intermediate', thumbnail: 'https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?w=800&auto=format&fit=crop&q=60' },
-  { id: 6, title: 'Web3 DApps with React & Ethers', instructor: 'Maria Garcia', duration: '9 weeks', rating: 4.7, students: 1100, category: 'smart-contracts', level: 'Intermediate', thumbnail: 'https://images.unsplash.com/photo-1550439062-609e1531270e?w=800&auto=format&fit=crop&q=60' },
-];
+import { useCourses } from '@/contexts/CourseContext';
+import { BookOpen, Clock, Star, Users, Award, Loader2 } from 'lucide-react';
 
 export default function Courses() {
+  const { courses, loading, error, refreshCourses, enrollInCourse } = useCourses();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'popular' | 'rating' | 'newest'>('popular');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  useEffect(() => {
+    // Refresh courses when component mounts
+    refreshCourses();
+  }, []);
+
+  // Refresh courses when navigating to this page (especially after course creation)
+  useEffect(() => {
+    refreshCourses();
+  }, [location.pathname]);
 
   const filtered = useMemo(() => {
-    let data = allCourses.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
-    if (sort === 'rating') data = [...data].sort((a,b) => b.rating - a.rating);
-    if (sort === 'popular') data = [...data].sort((a,b) => b.students - a.students);
+    let data = courses.filter(c =>
+      c.status === 'active' && // Only show active courses
+      c.title.toLowerCase().includes(query.toLowerCase()) &&
+      (selectedCategory === 'all' || (c.category && c.category.toLowerCase().includes(selectedCategory.toLowerCase())))
+    );
+
+    console.log('Total courses:', courses.length);
+    console.log('Active courses:', data.length);
+    console.log('All courses:', courses);
+
+    if (sort === 'rating') data = [...data].sort((a, b) => b.rating - a.rating);
+    if (sort === 'popular') data = [...data].sort((a, b) => b.students - a.students);
+    if (sort === 'newest') data = [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     return data;
-  }, [query, sort]);
+  }, [courses, query, sort, selectedCategory]);
 
   const categories = [
     { key: 'all', label: 'All' },
     { key: 'blockchain', label: 'Blockchain' },
-    { key: 'smart-contracts', label: 'Smart Contracts' },
+    { key: 'smart', label: 'Smart Contracts' },
     { key: 'defi', label: 'DeFi' },
     { key: 'nft', label: 'NFTs' },
     { key: 'dao', label: 'DAO' },
+    { key: 'web3', label: 'Web3' },
   ] as const;
 
-  const renderCards = (items: Course[]) => (
+  const handleEnroll = async (courseId: string) => {
+    try {
+      await enrollInCourse(courseId);
+    } catch (err) {
+      console.error('Enrollment failed:', err);
+    }
+  };
+
+  const renderCards = (items: any[]) => (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((course, idx) => (
-        <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-scale-in" style={{ animationDelay: `${idx * 40}ms` }}>
-          <img src={course.thumbnail} alt={`${course.title} course banner`} loading="lazy" className="w-full h-44 object-cover" />
+        <Card key={course.id || course._id} className="overflow-hidden hover:shadow-elevation animate-scale-in" style={{ animationDelay: `${idx * 40}ms` }}>
+          <img
+            src={course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop'}
+            alt={`${course.title} course banner`}
+            loading="lazy"
+            className="w-full h-44 object-cover"
+          />
           <div className="p-6 space-y-3">
             <div className="flex items-center justify-between">
               <Badge variant="secondary">{course.level}</Badge>
               <div className="flex items-center text-sm text-muted-foreground">
-                <Star className="w-4 h-4 text-primary mr-1" /> {course.rating}
+                <Star className="w-4 h-4 text-primary mr-1" /> {course.rating || 0}
               </div>
             </div>
             <h3 className="font-semibold text-lg">{course.title}</h3>
-            <p className="text-sm text-muted-foreground">By {course.instructor}</p>
+            <p className="text-sm text-muted-foreground">
+              By {course.teacher?.username || 'SkillChain Instructor'}
+            </p>
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted-foreground"><Clock className="w-4 h-4" /> {course.duration}</span>
-              <span className="flex items-center gap-2 text-muted-foreground"><Users className="w-4 h-4" /> {course.students.toLocaleString()}</span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="w-4 h-4" /> {course.duration}
+              </span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Users className="w-4 h-4" /> {course.students}
+              </span>
             </div>
-            <Button className="w-full gradient-primary">Enroll & Earn SkillTokens</Button>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">{course.price} ETH</span>
+              <span className="text-green-600 font-medium">+{course.skillTokenReward} SKILL</span>
+            </div>
+            <Button
+              className="w-full gradient-primary"
+              onClick={() => handleEnroll(course.id || course._id)}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <>Enroll & Earn SkillTokens</>
+              )}
+            </Button>
           </div>
         </Card>
       ))}
     </div>
   );
+
+  if (loading && courses.length === 0) {
+    return (
+      <div className="min-h-screen bg-background pt-20 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading courses...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-16">
@@ -93,55 +143,95 @@ export default function Courses() {
           <div className="rounded-2xl p-6 gradient-secondary shadow-elevation animate-scale-in">
             <div className="grid sm:grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-3xl font-bold">100K+</p>
-                <p className="text-sm text-muted-foreground">Free Courses</p>
+                <p className="text-3xl font-bold">{courses.length}</p>
+                <p className="text-sm text-muted-foreground">Active Courses</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">1,000+</p>
-                <p className="text-sm text-muted-foreground">Expert Mentors</p>
+                <p className="text-3xl font-bold">{courses.reduce((sum, course) => sum + course.students, 0)}</p>
+                <p className="text-sm text-muted-foreground">Students</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">1M+</p>
-                <p className="text-sm text-muted-foreground">Reviews</p>
+                <p className="text-3xl font-bold">{courses.reduce((sum, course) => sum + course.certificates, 0)}</p>
+                <p className="text-sm text-muted-foreground">Certificates</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="mt-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-            <div className="flex-1 max-w-xl">
-              <Input placeholder="Search courses (e.g., Smart Contracts)" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
-            <div className="flex items-center gap-3">
-              <Select value={sort} onValueChange={(v: any) => setSort(v)}>
-                <SelectTrigger className="w-40"><SelectValue placeholder="Sort by" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popular">Most Popular</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="newest">Newest</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600">Error loading courses: {error}</p>
+            <Button
+              variant="outline"
+              onClick={refreshCourses}
+              className="mt-2"
+              disabled={loading}
+            >
+              Retry
+            </Button>
           </div>
+        )}
 
-          <Tabs defaultValue="all" className="space-y-6">
-            <TabsList className="flex flex-wrap gap-2">
-              {categories.map(c => (
-                <TabsTrigger key={c.key} value={c.key}>{c.label}</TabsTrigger>
+        <div className="flex flex-col lg:flex-row gap-6 mb-8">
+          <Input
+            placeholder="Search courses..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1"
+          />
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full lg:w-48">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(cat => (
+                <SelectItem key={cat.key} value={cat.key}>{cat.label}</SelectItem>
               ))}
-            </TabsList>
-
-            <TabsContent value="all">{renderCards(filtered)}</TabsContent>
-            <TabsContent value="blockchain">{renderCards(filtered.filter(c => c.category === 'blockchain'))}</TabsContent>
-            <TabsContent value="smart-contracts">{renderCards(filtered.filter(c => c.category === 'smart-contracts'))}</TabsContent>
-            <TabsContent value="defi">{renderCards(filtered.filter(c => c.category === 'defi'))}</TabsContent>
-            <TabsContent value="nft">{renderCards(filtered.filter(c => c.category === 'nft'))}</TabsContent>
-            <TabsContent value="dao">{renderCards(filtered.filter(c => c.category === 'dao'))}</TabsContent>
-          </Tabs>
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={(value: any) => setSort(value)}>
+            <SelectTrigger className="w-full lg:w-48">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="popular">Most Popular</SelectItem>
+              <SelectItem value="rating">Highest Rated</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="grid w-full grid-cols-6 mb-8">
+            {categories.map(cat => (
+              <TabsTrigger
+                key={cat.key}
+                value={cat.key}
+                onClick={() => setSelectedCategory(cat.key)}
+              >
+                {cat.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {categories.map(cat => (
+            <TabsContent key={cat.key} value={cat.key}>
+              {filtered.length > 0 ? (
+                renderCards(filtered)
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No courses found</h3>
+                  <p className="text-muted-foreground">
+                    {query ? 'Try adjusting your search terms' : 'No courses available in this category yet'}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </main>
     </div>
   );

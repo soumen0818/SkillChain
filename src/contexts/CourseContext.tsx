@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { courseAPI } from '@/lib/api';
 
 export interface Course {
+  _id?: string;
   id: string;
   title: string;
   description: string;
@@ -27,15 +29,25 @@ export interface Course {
   createdAt: string;
   teacherId: string;
   curriculum?: any[]; // Course curriculum/modules
+  syllabus?: any[];
+  teacher?: {
+    _id: string;
+    username: string;
+    email: string;
+  };
 }
 
 interface CourseContextType {
   courses: Course[];
-  addCourse: (courseData: Omit<Course, 'id' | 'createdAt' | 'status' | 'students' | 'rating' | 'reviews' | 'completion' | 'earnings' | 'skillTokens' | 'lastUpdated' | 'certificates' | 'enrollmentTrend'>) => string;
-  updateCourse: (courseId: string, updates: Partial<Course>) => void;
+  loading: boolean;
+  error: string | null;
+  addCourse: (courseData: any) => Promise<string>;
+  updateCourse: (courseId: string, updates: Partial<Course>) => Promise<void>;
   getCourseById: (courseId: string) => Course | undefined;
   getTeacherCourses: (teacherId: string) => Course[];
-  deleteCourse: (courseId: string) => void;
+  deleteCourse: (courseId: string) => Promise<void>;
+  refreshCourses: () => Promise<void>;
+  enrollInCourse: (courseId: string) => Promise<void>;
 }
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
@@ -50,14 +62,56 @@ export const useCourses = () => {
 
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load courses from localStorage on mount
+  // Load courses from API on mount
   useEffect(() => {
-    const savedCourses = localStorage.getItem('skillchain_courses');
-    if (savedCourses) {
-      setCourses(JSON.parse(savedCourses));
-    } else {
-      // Initialize with default courses for demo
+    refreshCourses();
+  }, []);
+
+  const refreshCourses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const coursesData = await courseAPI.getAll();
+      // Transform backend course data to frontend format
+      const transformedCourses = coursesData.map((course: any) => ({
+        id: course._id,
+        _id: course._id,
+        title: course.title || 'Untitled Course',
+        description: course.description || 'No description available',
+        category: course.category || 'General',
+        level: course.level || 'Beginner',
+        duration: course.duration || 'TBD',
+        price: course.price || '0',
+        skillTokenReward: course.skillTokenReward || '0',
+        prerequisites: course.prerequisites || [],
+        learningOutcomes: course.learningOutcomes || [],
+        thumbnail: course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop',
+        status: course.status || 'active', // Default to active for existing courses
+        students: course.students ? course.students.length : 0,
+        rating: course.rating || 0,
+        reviews: course.reviews || 0,
+        completion: 0, // Calculate based on enrollment data if available
+        earnings: course.earnings || '0 ETH',
+        skillTokens: course.skillTokens || '0 SKILL',
+        lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : 'Recently',
+        modules: course.modules || 0,
+        totalLessons: course.totalLessons || 0,
+        certificates: course.certificates || 0,
+        enrollmentTrend: course.enrollmentTrend || '+0%',
+        createdAt: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '',
+        teacherId: course.teacher?._id || course.teacher,
+        curriculum: course.syllabus || [],
+        syllabus: course.syllabus || [],
+        teacher: course.teacher,
+      }));
+      setCourses(transformedCourses);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to load courses:', err);
+      // Fallback to default courses for demo
       const defaultCourses: Course[] = [
         {
           id: '1',
@@ -102,134 +156,217 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           students: 32,
           rating: 4.9,
           reviews: 18,
-          completion: 92,
-          earnings: '1.8 ETH',
+          completion: 76,
+          earnings: '3.1 ETH',
           skillTokens: '180 SKILL',
-          lastUpdated: '1 week ago',
+          lastUpdated: '5 days ago',
           modules: 12,
           totalLessons: 36,
-          certificates: 29,
+          certificates: 24,
           enrollmentTrend: '+8%',
           createdAt: '2024-02-20',
           teacherId: 'teacher1'
         },
-        {
-          id: '3',
-          title: 'DeFi Protocol Development',
-          description: 'Build decentralized finance protocols and understand the DeFi ecosystem.',
-          category: 'DeFi',
-          level: 'Intermediate',
-          duration: '10 weeks',
-          price: '0.15',
-          skillTokenReward: '150',
-          prerequisites: ['Smart contract knowledge', 'Financial protocols understanding'],
-          learningOutcomes: ['Build DeFi protocols', 'Understand liquidity mechanisms', 'Implement yield farming'],
-          thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop',
-          status: 'draft',
-          students: 28,
-          rating: 4.7,
-          reviews: 15,
-          completion: 0,
-          earnings: '1.2 ETH',
-          skillTokens: '120 SKILL',
-          lastUpdated: '3 days ago',
-          modules: 10,
-          totalLessons: 30,
-          certificates: 0,
-          enrollmentTrend: '+5%',
-          createdAt: '2024-03-10',
-          teacherId: 'teacher1'
-        },
-        {
-          id: '4',
-          title: 'NFT Marketplace Building',
-          description: 'Create your own NFT marketplace with advanced features and integrations.',
-          category: 'NFTs',
-          level: 'Intermediate',
-          duration: '6 weeks',
-          price: '0.12',
-          skillTokenReward: '120',
-          prerequisites: ['React knowledge', 'Smart contract basics', 'IPFS understanding'],
-          learningOutcomes: ['Build NFT marketplace', 'Integrate with wallets', 'Handle metadata storage'],
-          thumbnail: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&h=200&fit=crop',
-          status: 'paused',
-          students: 19,
-          rating: 4.6,
-          reviews: 12,
-          completion: 67,
-          earnings: '0.8 ETH',
-          skillTokens: '95 SKILL',
-          lastUpdated: '1 month ago',
-          modules: 6,
-          totalLessons: 18,
-          certificates: 12,
-          enrollmentTrend: '+3%',
-          createdAt: '2024-04-05',
-          teacherId: 'teacher1'
-        }
       ];
       setCourses(defaultCourses);
       localStorage.setItem('skillchain_courses', JSON.stringify(defaultCourses));
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  // Save courses to localStorage whenever courses change
-  useEffect(() => {
-    localStorage.setItem('skillchain_courses', JSON.stringify(courses));
-  }, [courses]);
-
-  const addCourse = (courseData: Omit<Course, 'id' | 'createdAt' | 'status' | 'students' | 'rating' | 'reviews' | 'completion' | 'earnings' | 'skillTokens' | 'lastUpdated' | 'certificates' | 'enrollmentTrend'>): string => {
-    const newCourse: Course = {
-      ...courseData,
-      id: `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      status: 'draft',
-      students: 0,
-      rating: 0,
-      reviews: 0,
-      completion: 0,
-      earnings: '0 ETH',
-      skillTokens: '0 SKILL',
-      lastUpdated: 'Just created',
-      certificates: 0,
-      enrollmentTrend: '+0%',
-      createdAt: new Date().toISOString().split('T')[0],
-      thumbnail: courseData.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop'
-    };
-
-    setCourses(prev => [...prev, newCourse]);
-    return newCourse.id;
   };
 
-  const updateCourse = (courseId: string, updates: Partial<Course>) => {
-    setCourses(prev => 
-      prev.map(course => 
-        course.id === courseId 
+  const addCourse = async (courseData: any): Promise<string> => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Prepare course data for API
+      const apiCourseData = {
+        title: courseData.title,
+        description: courseData.description,
+        category: courseData.category,
+        level: courseData.level,
+        duration: courseData.duration,
+        price: courseData.price,
+        skillTokenReward: courseData.skillTokenReward,
+        prerequisites: courseData.prerequisites || [],
+        learningOutcomes: courseData.learningOutcomes || [],
+        thumbnail: courseData.thumbnail || null,
+        syllabus: courseData.syllabus || [],
+        status: courseData.status || 'draft',
+      };
+
+      const createdCourse = await courseAPI.create(apiCourseData);
+
+      // Transform and add to local state
+      const transformedCourse: Course = {
+        id: createdCourse._id,
+        _id: createdCourse._id,
+        title: createdCourse.title,
+        description: createdCourse.description,
+        category: createdCourse.category,
+        level: createdCourse.level,
+        duration: createdCourse.duration,
+        price: createdCourse.price,
+        skillTokenReward: createdCourse.skillTokenReward,
+        prerequisites: createdCourse.prerequisites || [],
+        learningOutcomes: createdCourse.learningOutcomes || [],
+        thumbnail: createdCourse.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop',
+        status: createdCourse.status,
+        students: 0,
+        rating: 0,
+        reviews: 0,
+        completion: 0,
+        earnings: '0 ETH',
+        skillTokens: '0 SKILL',
+        lastUpdated: 'Just created',
+        modules: createdCourse.modules || 0,
+        totalLessons: createdCourse.totalLessons || 0,
+        certificates: 0,
+        enrollmentTrend: '+0%',
+        createdAt: new Date().toLocaleDateString(),
+        teacherId: createdCourse.teacher,
+        curriculum: createdCourse.syllabus || [],
+        syllabus: createdCourse.syllabus || [],
+        teacher: createdCourse.teacher,
+      };
+
+      setCourses(prev => [...prev, transformedCourse]);
+
+      // Also save to localStorage as backup
+      const updatedCourses = [...courses, transformedCourse];
+      localStorage.setItem('skillchain_courses', JSON.stringify(updatedCourses));
+
+      return createdCourse._id;
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to create course:', err);
+
+      // Fallback to localStorage only
+      const newCourse: Course = {
+        ...courseData,
+        id: `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        status: 'draft',
+        students: 0,
+        rating: 0,
+        reviews: 0,
+        completion: 0,
+        earnings: '0 ETH',
+        skillTokens: '0 SKILL',
+        lastUpdated: 'Just created',
+        certificates: 0,
+        enrollmentTrend: '+0%',
+        createdAt: new Date().toISOString().split('T')[0],
+        thumbnail: courseData.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop'
+      };
+
+      setCourses(prev => [...prev, newCourse]);
+      localStorage.setItem('skillchain_courses', JSON.stringify([...courses, newCourse]));
+      return newCourse.id;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateCourse = async (courseId: string, updates: Partial<Course>): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await courseAPI.update(courseId, updates);
+
+      setCourses(prev =>
+        prev.map(course =>
+          course.id === courseId || course._id === courseId
+            ? { ...course, ...updates, lastUpdated: 'Just updated' }
+            : course
+        )
+      );
+
+      // Update localStorage backup
+      const updatedCourses = courses.map(course =>
+        course.id === courseId || course._id === courseId
           ? { ...course, ...updates, lastUpdated: 'Just updated' }
           : course
-      )
-    );
+      );
+      localStorage.setItem('skillchain_courses', JSON.stringify(updatedCourses));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to update course:', err);
+
+      // Fallback to localStorage only
+      setCourses(prev =>
+        prev.map(course =>
+          course.id === courseId || course._id === courseId
+            ? { ...course, ...updates, lastUpdated: 'Just updated' }
+            : course
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCourseById = (courseId: string): Course | undefined => {
-    return courses.find(course => course.id === courseId);
+    return courses.find(course => course.id === courseId || course._id === courseId);
   };
 
   const getTeacherCourses = (teacherId: string): Course[] => {
     return courses.filter(course => course.teacherId === teacherId);
   };
 
-  const deleteCourse = (courseId: string) => {
-    setCourses(prev => prev.filter(course => course.id !== courseId));
+  const deleteCourse = async (courseId: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await courseAPI.delete(courseId);
+      setCourses(prev => prev.filter(course => course.id !== courseId && course._id !== courseId));
+
+      // Update localStorage backup
+      const updatedCourses = courses.filter(course => course.id !== courseId && course._id !== courseId);
+      localStorage.setItem('skillchain_courses', JSON.stringify(updatedCourses));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to delete course:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const enrollInCourse = async (courseId: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await courseAPI.enroll(courseId);
+
+      // Update local course data to reflect enrollment
+      setCourses(prev =>
+        prev.map(course =>
+          course.id === courseId || course._id === courseId
+            ? { ...course, students: course.students + 1 }
+            : course
+        )
+      );
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to enroll in course:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <CourseContext.Provider value={{
       courses,
+      loading,
+      error,
       addCourse,
       updateCourse,
       getCourseById,
       getTeacherCourses,
-      deleteCourse
+      deleteCourse,
+      refreshCourses,
+      enrollInCourse,
     }}>
       {children}
     </CourseContext.Provider>

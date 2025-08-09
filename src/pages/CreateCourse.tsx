@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Upload, 
-  X, 
-  Plus, 
-  FileText, 
-  Video, 
-  Image, 
+import {
+  Upload,
+  X,
+  Plus,
+  FileText,
+  Video,
+  Image,
   File,
   BookOpen,
   Award,
@@ -32,6 +32,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/contexts/CourseContext';
+import { uploadThumbnail, uploadLessonContent, validateFile, formatFileSize } from '@/lib/uploadUtils';
 
 interface CourseData {
   title: string;
@@ -43,7 +44,7 @@ interface CourseData {
   skillTokenReward: string;
   prerequisites: string[];
   learningOutcomes: string[];
-  thumbnail: File | null;
+  thumbnail: string | null; // Changed from File to string (URL)
   syllabus: Module[];
 }
 
@@ -58,7 +59,7 @@ interface Lesson {
   id: string;
   title: string;
   type: 'video' | 'document' | 'quiz' | 'assignment';
-  content: File | null;
+  content: string | null; // Changed from File to string (URL)
   description: string;
 }
 
@@ -66,7 +67,7 @@ export default function CreateCourse() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { addCourse } = useCourses();
+  const { addCourse, refreshCourses } = useCourses();
   const [currentStep, setCurrentStep] = useState(1);
   const [courseData, setCourseData] = useState<CourseData>({
     title: '',
@@ -138,7 +139,7 @@ export default function CreateCourse() {
   };
 
   const updateModule = (moduleId: string, field: keyof Module, value: any) => {
-    const updatedSyllabus = courseData.syllabus.map(module => 
+    const updatedSyllabus = courseData.syllabus.map(module =>
       module.id === moduleId ? { ...module, [field]: value } : module
     );
     handleInputChange('syllabus', updatedSyllabus);
@@ -156,9 +157,9 @@ export default function CreateCourse() {
       content: null,
       description: ''
     };
-    
-    const updatedSyllabus = courseData.syllabus.map(module => 
-      module.id === moduleId 
+
+    const updatedSyllabus = courseData.syllabus.map(module =>
+      module.id === moduleId
         ? { ...module, lessons: [...module.lessons, newLesson] }
         : module
     );
@@ -166,33 +167,73 @@ export default function CreateCourse() {
   };
 
   const updateLesson = (moduleId: string, lessonId: string, field: keyof Lesson, value: any) => {
-    const updatedSyllabus = courseData.syllabus.map(module => 
-      module.id === moduleId 
+    const updatedSyllabus = courseData.syllabus.map(module =>
+      module.id === moduleId
         ? {
-            ...module,
-            lessons: module.lessons.map(lesson =>
-              lesson.id === lessonId ? { ...lesson, [field]: value } : lesson
-            )
-          }
+          ...module,
+          lessons: module.lessons.map(lesson =>
+            lesson.id === lessonId ? { ...lesson, [field]: value } : lesson
+          )
+        }
         : module
     );
     handleInputChange('syllabus', updatedSyllabus);
   };
 
   const removeLesson = (moduleId: string, lessonId: string) => {
-    const updatedSyllabus = courseData.syllabus.map(module => 
-      module.id === moduleId 
+    const updatedSyllabus = courseData.syllabus.map(module =>
+      module.id === moduleId
         ? { ...module, lessons: module.lessons.filter(lesson => lesson.id !== lessonId) }
         : module
     );
     handleInputChange('syllabus', updatedSyllabus);
   };
 
-  const handleFileUpload = (file: File, field: 'thumbnail' | 'content', moduleId?: string, lessonId?: string) => {
-    if (field === 'thumbnail') {
-      handleInputChange('thumbnail', file);
-    } else if (moduleId && lessonId) {
-      updateLesson(moduleId, lessonId, 'content', file);
+  const handleFileUpload = async (file: File, field: 'thumbnail' | 'content', moduleId?: string, lessonId?: string) => {
+    try {
+      // Validate file first
+      const validation = validateFile(file, field === 'thumbnail' ? 'thumbnail' : 'content');
+      if (!validation.valid) {
+        toast({
+          title: "File Validation Error",
+          description: validation.error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Show upload progress
+      toast({
+        title: "Uploading...",
+        description: `Uploading ${file.name} (${formatFileSize(file.size)})`,
+      });
+
+      if (field === 'thumbnail') {
+        // Upload thumbnail to Cloudinary
+        const uploadResult = await uploadThumbnail(file);
+        handleInputChange('thumbnail', uploadResult.url);
+
+        toast({
+          title: "Upload Successful",
+          description: "Thumbnail uploaded successfully!",
+        });
+      } else if (moduleId && lessonId) {
+        // Upload lesson content to Cloudinary
+        const uploadResult = await uploadLessonContent(file);
+        updateLesson(moduleId, lessonId, 'content', uploadResult.url);
+
+        toast({
+          title: "Upload Successful",
+          description: "Lesson content uploaded successfully!",
+        });
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -227,7 +268,7 @@ export default function CreateCourse() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!user?._id) {
       toast({
         title: "Authentication Error",
@@ -247,30 +288,43 @@ export default function CreateCourse() {
       return;
     }
 
-    // Create the course object as draft
-    const newCourseId = addCourse({
-      title: courseData.title,
-      description: courseData.description,
-      category: courseData.category || 'Other',
-      level: courseData.level || 'Beginner',
-      duration: courseData.duration || 'TBD',
-      price: courseData.price || '0',
-      skillTokenReward: courseData.skillTokenReward || '0',
-      prerequisites: courseData.prerequisites,
-      learningOutcomes: courseData.learningOutcomes,
-      thumbnail: courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null,
-      modules: courseData.syllabus.length,
-      totalLessons: courseData.syllabus.reduce((total, module) => total + module.lessons.length, 0),
-      teacherId: user._id
-    });
+    try {
+      // Create the course object as draft
+      const draftCourse = {
+        title: courseData.title,
+        description: courseData.description || '',
+        category: courseData.category || 'Other',
+        level: courseData.level || 'Beginner',
+        duration: courseData.duration || 'TBD',
+        price: courseData.price || '0',
+        skillTokenReward: courseData.skillTokenReward || '0',
+        prerequisites: courseData.prerequisites,
+        learningOutcomes: courseData.learningOutcomes,
+        thumbnail: courseData.thumbnail || null,
+        syllabus: courseData.syllabus.map(module => ({
+          ...module,
+          lessons: module.lessons.map(lesson => ({
+            ...lesson,
+            content: lesson.content || ''
+          }))
+        })),
+        status: 'draft'
+      }; await addCourse(draftCourse);
 
-    toast({
-      title: "Draft Saved",
-      description: "Your course has been saved as a draft and is now visible in your dashboard.",
-    });
+      toast({
+        title: "Draft Saved",
+        description: "Your course has been saved as a draft and is now visible in your dashboard.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save draft. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (validateStep(1) && validateStep(2) && validateStep(3) && validateStep(4)) {
       if (!user?._id) {
         toast({
@@ -281,28 +335,48 @@ export default function CreateCourse() {
         return;
       }
 
-      // Create the course object
-      const newCourseId = addCourse({
-        title: courseData.title,
-        description: courseData.description,
-        category: courseData.category,
-        level: courseData.level,
-        duration: courseData.duration,
-        price: courseData.price,
-        skillTokenReward: courseData.skillTokenReward,
-        prerequisites: courseData.prerequisites,
-        learningOutcomes: courseData.learningOutcomes,
-        thumbnail: courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null,
-        modules: courseData.syllabus.length,
-        totalLessons: courseData.syllabus.reduce((total, module) => total + module.lessons.length, 0),
-        teacherId: user._id
-      });
+      try {
+        // Create the course object with proper structure for the backend
+        const courseToPublish = {
+          title: courseData.title,
+          description: courseData.description,
+          category: courseData.category,
+          level: courseData.level,
+          duration: courseData.duration,
+          price: courseData.price,
+          skillTokenReward: courseData.skillTokenReward,
+          prerequisites: courseData.prerequisites,
+          learningOutcomes: courseData.learningOutcomes,
+          thumbnail: courseData.thumbnail || null,
+          syllabus: courseData.syllabus.map(module => ({
+            ...module,
+            lessons: module.lessons.map(lesson => ({
+              ...lesson,
+              content: lesson.content || ''
+            }))
+          })),
+          status: 'active' // Set status to active when publishing
+        }; const newCourseId = await addCourse(courseToPublish);
+        console.log('Course created with ID:', newCourseId);
 
-      toast({
-        title: "Course Published!",
-        description: "Your course has been published successfully and is now visible in your dashboard.",
-      });
-      navigate('/teacher-dashboard');
+        // Refresh courses to ensure the new course is immediately available
+        await refreshCourses();
+        console.log('Courses refreshed after creation');
+
+        toast({
+          title: "Course Published!",
+          description: "Your course has been successfully published and is now visible to students on the main courses page.",
+        });
+
+        // Navigate to courses page to show the new course
+        navigate('/courses');
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to publish course. Please try again.",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
         title: "Validation Error",
@@ -330,8 +404,8 @@ export default function CreateCourse() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => navigate('/teacher-dashboard')}
             >
@@ -367,7 +441,7 @@ export default function CreateCourse() {
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold mb-6">Basic Course Information</h2>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Course Title *</Label>
@@ -418,10 +492,21 @@ export default function CreateCourse() {
                       id="thumbnail-upload"
                     />
                     <label htmlFor="thumbnail-upload" className="cursor-pointer">
-                      <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        {courseData.thumbnail ? courseData.thumbnail.name : 'Click to upload thumbnail'}
-                      </p>
+                      {courseData.thumbnail ? (
+                        <div className="text-center">
+                          <img
+                            src={courseData.thumbnail}
+                            alt="Course thumbnail"
+                            className="w-20 h-20 mx-auto mb-2 object-cover rounded border"
+                          />
+                          <p className="text-sm text-green-600">Thumbnail uploaded</p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Click to upload thumbnail</p>
+                        </div>
+                      )}
                     </label>
                   </div>
                 </div>
@@ -444,7 +529,7 @@ export default function CreateCourse() {
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold mb-6">Pricing & Token Rewards</h2>
-              
+
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="duration">Course Duration *</Label>
@@ -543,7 +628,7 @@ export default function CreateCourse() {
           {currentStep === 3 && (
             <div className="space-y-8">
               <h2 className="text-2xl font-semibold">Prerequisites & Learning Outcomes</h2>
-              
+
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Prerequisites */}
                 <div className="space-y-4">
@@ -701,7 +786,7 @@ export default function CreateCourse() {
                                     <Button variant="outline" size="sm" className="w-full" asChild>
                                       <span>
                                         <IconComponent className="w-4 h-4 mr-2" />
-                                        {lesson.content ? lesson.content.name : 'Upload'}
+                                        {lesson.content ? 'Content uploaded' : 'Upload'}
                                       </span>
                                     </Button>
                                   </label>
@@ -731,7 +816,7 @@ export default function CreateCourse() {
           {currentStep === 5 && (
             <div className="space-y-8">
               <h2 className="text-2xl font-semibold">Review & Publish</h2>
-              
+
               <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
                   {/* Course Overview */}
@@ -796,23 +881,23 @@ export default function CreateCourse() {
                   <Card className="p-6">
                     <h3 className="text-lg font-semibold mb-4">Publishing Options</h3>
                     <div className="space-y-4">
-                      <Button 
+                      <Button
                         onClick={handleSaveDraft}
-                        variant="outline" 
+                        variant="outline"
                         className="w-full"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         Save as Draft
                       </Button>
-                      <Button 
-                        onClick={() => {/* Preview logic */}}
-                        variant="outline" 
+                      <Button
+                        onClick={() => {/* Preview logic */ }}
+                        variant="outline"
                         className="w-full"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         Preview Course
                       </Button>
-                      <Button 
+                      <Button
                         onClick={handlePublish}
                         className="w-full gradient-primary"
                       >
@@ -851,20 +936,20 @@ export default function CreateCourse() {
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-8 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
             >
               Previous
             </Button>
-            
+
             <div className="space-x-4">
               <Button variant="outline" onClick={handleSaveDraft}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Draft
               </Button>
-              
+
               {currentStep < 5 ? (
                 <Button onClick={nextStep} className="gradient-primary">
                   Next
