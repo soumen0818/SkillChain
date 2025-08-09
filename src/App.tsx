@@ -19,6 +19,9 @@ import TeacherAnalytics from "./pages/TeacherAnalytics";
 import MyCourses from "./pages/MyCourses";
 import CourseStudy from "./pages/CourseStudy";
 import BrowseCourses from "./pages/BrowseCourses";
+import CourseProgress from "./pages/CourseProgress";
+import GetCertificate from "./pages/GetCertificate";
+import DownloadCertificate from "./pages/DownloadCertificate";
 import CourseManagement from "./pages/CourseManagement";
 import EditCourse from "./pages/EditCourse";
 import CourseAnalytics from "./pages/CourseAnalytics";
@@ -78,6 +81,33 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <BrowseCourses />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/course-progress/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CourseProgress />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/get-certificate/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <GetCertificate />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/download-certificate/:courseId"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <DownloadCertificate />
                 </ProtectedRoute>
               }
             />

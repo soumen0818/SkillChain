@@ -531,19 +531,30 @@ export default function MyCourses() {
                                 {course.status === 'completed' ? 'Completed' : 
                                  course.status === 'paused' ? 'Resume' : 'Continue'}
                               </Button>
-                              <Button variant="outline">
+                              <Button 
+                                variant="outline"
+                                onClick={() => navigate(`/course-progress/${course.id}`)}
+                              >
                                 <BarChart3 className="w-4 h-4 mr-2" />
                                 Progress
                               </Button>
                               {course.certificateEligible && (
-                                <Button variant="outline" className="text-yellow-600 border-yellow-200 hover:bg-yellow-50">
+                                <Button 
+                                  variant="outline" 
+                                  className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                                  onClick={() => navigate(`/get-certificate/${course.id}`)}
+                                >
                                   <Award className="w-4 h-4 mr-2" />
                                   Get Certificate
                                 </Button>
                               )}
                             </div>
                             <div className="flex space-x-2">
-                              <Button size="sm" variant="ghost">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => navigate(`/download-certificate/${course.id}`)}
+                              >
                                 <Download className="w-4 h-4" />
                               </Button>
                             </div>
