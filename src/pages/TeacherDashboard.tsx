@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCourses } from '@/contexts/CourseContext';
+import { useToast } from '@/hooks/use-toast';
 import { 
   BookOpen, 
   Users, 
@@ -19,52 +23,43 @@ import {
   Upload,
   CheckCircle,
   Clock,
-  Star
+  Star,
+  Coins,
+  Globe,
+  MoreVertical,
+  Play,
+  Pause,
+  Archive,
+  Trash2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const { getTeacherCourses, deleteCourse } = useCourses();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
 
-  const stats = [
-    { icon: BookOpen, label: 'Active Courses', value: '8', color: 'text-blue-600' },
-    { icon: Users, label: 'Total Students', value: '324', color: 'text-green-600' },
-    { icon: DollarSign, label: 'Earnings (ETH)', value: '12.4', color: 'text-primary' },
-    { icon: Award, label: 'Certificates Issued', value: '156', color: 'text-purple-600' }
-  ];
+  // Get courses for the current teacher
+  const courses = user?.id ? getTeacherCourses(user.id) : [];
 
-  const courses = [
-    {
-      id: 1,
-      title: 'Blockchain Fundamentals',
-      students: 45,
-      progress: 75,
-      earnings: '2.3 ETH',
-      status: 'active',
-      rating: 4.8,
-      thumbnail: 'https://images.unsplash.com/photo-1518896012122-3dcff33c6334?w=300&h=200&fit=crop'
-    },
-    {
-      id: 2,
-      title: 'Advanced Smart Contracts',
-      students: 32,
-      progress: 60,
-      earnings: '1.8 ETH',
-      status: 'active',
-      rating: 4.9,
-      thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=300&h=200&fit=crop'
-    },
-    {
-      id: 3,
-      title: 'DeFi Protocol Development',
-      students: 28,
-      progress: 40,
-      earnings: '1.2 ETH',
-      status: 'draft',
-      rating: 4.7,
-      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop'
+  const handleDeleteCourse = (courseId, courseTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone.`)) {
+      deleteCourse(courseId);
+      toast({
+        title: "Course Deleted",
+        description: `"${courseTitle}" has been permanently deleted.`,
+      });
     }
+  };
+
+  const stats = [
+    { icon: BookOpen, label: 'Active Courses', value: courses.filter(c => c.status === 'active').length.toString(), color: 'text-blue-600' },
+    { icon: Users, label: 'Total Students', value: courses.reduce((sum, course) => sum + course.students, 0).toString(), color: 'text-green-600' },
+    { icon: DollarSign, label: 'Earnings (ETH)', value: courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0).toFixed(1), color: 'text-primary' },
+    { icon: Award, label: 'Certificates Issued', value: courses.reduce((sum, course) => sum + course.certificates, 0).toString(), color: 'text-purple-600' }
   ];
 
   const recentActivity = [
@@ -146,7 +141,10 @@ export default function TeacherDashboard() {
               <Card className="p-6">
                 <h3 className="text-xl font-semibold mb-6">Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button className="gradient-primary h-16 flex-col space-y-2">
+                  <Button 
+                    className="gradient-primary h-16 flex-col space-y-2"
+                    onClick={() => navigate('/create-course')}
+                  >
                     <Plus className="w-5 h-5" />
                     <span>Create Course</span>
                   </Button>
@@ -217,57 +215,184 @@ export default function TeacherDashboard() {
 
           <TabsContent value="courses" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-semibold">My Courses</h3>
-              <Button className="gradient-primary">
+              <div>
+                <h3 className="text-2xl font-semibold">My Courses</h3>
+                <p className="text-muted-foreground">Manage and track your educational content</p>
+              </div>
+              <Button 
+                className="gradient-primary"
+                onClick={() => navigate('/create-course')}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Course
               </Button>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {/* Course Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Courses</p>
+                    <p className="text-xl font-bold">{courses.length}</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Students</p>
+                    <p className="text-xl font-bold">{courses.reduce((sum, course) => sum + course.students, 0)}</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Earnings</p>
+                    <p className="text-xl font-bold">{courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0).toFixed(1)} ETH</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Award className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Certificates</p>
+                    <p className="text-xl font-bold">{courses.reduce((sum, course) => sum + course.certificates, 0)}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Course Grid */}
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
               {courses.map((course) => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                  <img 
-                    src={course.thumbnail} 
-                    alt={course.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-lg">{course.title}</h4>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        course.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+                  <div className="relative">
+                    <img 
+                      src={course.thumbnail} 
+                      alt={course.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <Badge 
+                        variant={course.status === 'active' ? 'default' : course.status === 'draft' ? 'secondary' : 'outline'}
+                        className={`${
+                          course.status === 'active' ? 'bg-green-500 hover:bg-green-600' : 
+                          course.status === 'draft' ? 'bg-yellow-500 hover:bg-yellow-600' : 
+                          'bg-gray-500 hover:bg-gray-600'
+                        } text-white capitalize`}
+                      >
                         {course.status}
-                      </span>
+                      </Badge>
                     </div>
+                    <div className="absolute top-4 right-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="secondary" size="sm" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/course-management/${course.id}`)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Manage Course
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteCourse(course.id, course.title)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Course
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6">
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
+                      <div>
+                        <h4 className="font-semibold text-lg line-clamp-2 mb-2">{course.title}</h4>
+                        <p className="text-sm text-muted-foreground">Updated {course.lastUpdated}</p>
+                      </div>
+                      
+                      {/* Course Stats */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2 text-sm">
                           <Users className="w-4 h-4 text-muted-foreground" />
                           <span>{course.students} students</span>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 text-sm">
                           <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span>{course.rating}</span>
+                          <span>{course.rating} ({course.reviews})</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <BookOpen className="w-4 h-4 text-muted-foreground" />
+                          <span>{course.modules} modules</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Award className="w-4 h-4 text-muted-foreground" />
+                          <span>{course.certificates} certs</span>
                         </div>
                       </div>
+
+                      {/* Progress */}
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span>Course Progress</span>
-                          <span>{course.progress}%</span>
+                          <span>Student Progress</span>
+                          <span>{course.completion}% avg</span>
                         </div>
-                        <Progress value={course.progress} />
+                        <Progress value={course.completion} className="h-2" />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary">{course.earnings}</span>
+
+                      {/* Earnings */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <DollarSign className="w-4 h-4 text-primary" />
+                            <span className="font-bold text-primary">{course.earnings}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Coins className="w-4 h-4 text-yellow-500" />
+                            <span className="text-sm text-muted-foreground">{course.skillTokens}</span>
+                          </div>
+                        </div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => navigate(`/course-preview/${course.id}`)}
+                            title="Preview Course"
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="outline">
-                            <Edit className="w-4 h-4" />
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => navigate(`/course-analytics/${course.id}`)}
+                            title="View Analytics"
+                          >
+                            <BarChart3 className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" className="gradient-primary">
+                          <Button 
+                            size="sm" 
+                            className="gradient-primary"
+                            onClick={() => navigate(`/course-settings/${course.id}`)}
+                            title="Course Settings"
+                          >
                             <Settings className="w-4 h-4" />
                           </Button>
                         </div>
@@ -276,6 +401,25 @@ export default function TeacherDashboard() {
                   </div>
                 </Card>
               ))}
+
+              {/* Add New Course Card */}
+              <Card 
+                className="overflow-hidden border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors cursor-pointer group"
+                onClick={() => navigate('/create-course')}
+              >
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                    <Plus className="w-8 h-8 text-primary" />
+                  </div>
+                  <h4 className="font-semibold text-lg mb-2">Create New Course</h4>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Start building your next blockchain course and mint NFT certificates
+                  </p>
+                  <Button className="gradient-primary">
+                    Get Started
+                  </Button>
+                </div>
+              </Card>
             </div>
           </TabsContent>
 
