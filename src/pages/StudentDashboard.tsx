@@ -29,10 +29,10 @@ export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
 
   const stats = [
-    { icon: BookOpen, label: 'Courses Enrolled', value: '12', color: 'text-blue-600' },
-    { icon: Trophy, label: 'Certificates Earned', value: '8', color: 'text-green-600' },
-    { icon: Coins, label: 'SkillTokens', value: '2,450', color: 'text-primary' },
-    { icon: TrendingUp, label: 'Learning Streak', value: '24 days', color: 'text-purple-600' }
+    { icon: BookOpen, label: 'Courses Enrolled', value: '3', color: 'text-blue-600' },
+    { icon: Trophy, label: 'Certificates Earned', value: '3', color: 'text-green-600' },
+    { icon: Coins, label: 'SkillTokens', value: '3,750', color: 'text-primary' },
+    { icon: TrendingUp, label: 'Learning Streak', value: '18 days', color: 'text-purple-600' }
   ];
 
   const courses = [
@@ -43,7 +43,12 @@ export default function StudentDashboard() {
       progress: 75,
       duration: '8 weeks',
       nextLesson: 'Smart Contracts Introduction',
-      thumbnail: 'https://images.unsplash.com/photo-1518896012122-3dcff33c6334?w=300&h=200&fit=crop'
+      thumbnail: 'https://images.unsplash.com/photo-1518896012122-3dcff33c6334?w=300&h=200&fit=crop',
+      category: 'blockchain',
+      topics: ['Blockchain Basics', 'Cryptography', 'Consensus Mechanisms', 'Smart Contracts', 'DeFi Overview'],
+      currentModule: 'Smart Contracts',
+      totalModules: 8,
+      skillLevel: 'Beginner to Intermediate'
     },
     {
       id: 2,
@@ -52,7 +57,12 @@ export default function StudentDashboard() {
       progress: 45,
       duration: '12 weeks',
       nextLesson: 'Building DApps with React',
-      thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=300&h=200&fit=crop'
+      thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=300&h=200&fit=crop',
+      category: 'web3',
+      topics: ['JavaScript Fundamentals', 'React.js', 'Web3.js Library', 'Ethers.js', 'DApp Architecture', 'Frontend Integration', 'Wallet Connection', 'Smart Contract Interaction'],
+      currentModule: 'React Integration',
+      totalModules: 12,
+      skillLevel: 'Intermediate to Advanced'
     },
     {
       id: 3,
@@ -61,41 +71,116 @@ export default function StudentDashboard() {
       progress: 90,
       duration: '6 weeks',
       nextLesson: 'Final Project Review',
-      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop'
+      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop',
+      category: 'nft',
+      topics: ['Digital Art Basics', 'NFT Standards (ERC-721/1155)', 'Metadata Creation', 'IPFS Storage', 'Minting Process', 'Marketplace Listing'],
+      currentModule: 'Final Project',
+      totalModules: 6,
+      skillLevel: 'Beginner to Intermediate'
+    },
+    {
+      id: 4,
+      title: 'DeFi Protocol Development',
+      instructor: 'Alex Rodriguez',
+      progress: 30,
+      duration: '10 weeks',
+      nextLesson: 'Yield Farming Mechanisms',
+      thumbnail: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&h=200&fit=crop',
+      category: 'defi',
+      topics: ['DeFi Fundamentals', 'Liquidity Pools', 'Automated Market Makers', 'Yield Farming', 'Governance Tokens', 'Protocol Security'],
+      currentModule: 'Yield Farming',
+      totalModules: 10,
+      skillLevel: 'Advanced'
+    },
+    {
+      id: 5,
+      title: 'Cryptocurrency Trading',
+      instructor: 'Michael Kim',
+      progress: 60,
+      duration: '8 weeks',
+      nextLesson: 'Risk Management Strategies',
+      thumbnail: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=200&fit=crop',
+      category: 'trading',
+      topics: ['Market Analysis', 'Technical Indicators', 'Trading Psychology', 'Risk Management', 'Portfolio Diversification', 'Trading Bots'],
+      currentModule: 'Risk Management',
+      totalModules: 8,
+      skillLevel: 'Intermediate'
+    },
+    {
+      id: 6,
+      title: 'Metaverse Development',
+      instructor: 'Emma Watson',
+      progress: 85,
+      duration: '14 weeks',
+      nextLesson: 'Virtual World Physics',
+      thumbnail: 'https://images.unsplash.com/photo-1617802690992-15d93263d3a9?w=300&h=200&fit=crop',
+      category: 'metaverse',
+      topics: ['3D Modeling', 'Unity3D', 'VR/AR Integration', 'Virtual Economics', 'Avatar Systems', 'Multiplayer Networking'],
+      currentModule: 'Physics Engine',
+      totalModules: 14,
+      skillLevel: 'Advanced'
     }
   ];
 
   const certificates = [
     {
       id: 1,
-      title: 'Introduction to Cryptocurrency',
+      title: 'NFT Art Creation Mastery',
       date: '2024-01-15',
       tokenId: '#NFT-001',
-      value: '0.1 ETH'
+      value: '0.12 ETH',
+      category: 'nft'
     },
     {
       id: 2,
-      title: 'DeFi Basics',
+      title: 'Blockchain Fundamentals',
       date: '2024-02-20',
       tokenId: '#NFT-002',
-      value: '0.15 ETH'
+      value: '0.08 ETH',
+      category: 'blockchain'
+    },
+    {
+      id: 3,
+      title: 'Metaverse Development',
+      date: '2024-03-10',
+      tokenId: '#NFT-003',
+      value: '0.18 ETH',
+      category: 'metaverse'
     }
   ];
 
   const marketplace = [
     {
       id: 1,
-      title: 'Advanced Solidity Certificate',
-      seller: 'john.eth',
-      price: '0.2 ETH',
-      skillTokens: '500 ST'
+      title: 'Advanced Solidity Programming',
+      seller: 'blockchain.dev',
+      price: '0.25 ETH',
+      skillTokens: '600 ST',
+      category: 'blockchain'
     },
     {
       id: 2,
-      title: 'UI/UX Design Mastery',
-      seller: 'designer.eth',
+      title: 'React Web3 Integration Mastery',
+      seller: 'web3.expert',
       price: '0.18 ETH',
-      skillTokens: '400 ST'
+      skillTokens: '450 ST',
+      category: 'web3'
+    },
+    {
+      id: 3,
+      title: 'NFT Marketplace Development',
+      seller: 'nft.creator',
+      price: '0.22 ETH',
+      skillTokens: '550 ST',
+      category: 'nft'
+    },
+    {
+      id: 4,
+      title: 'DeFi Yield Farming Strategies',
+      seller: 'defi.master',
+      price: '0.30 ETH',
+      skillTokens: '750 ST',
+      category: 'defi'
     }
   ];
 
@@ -153,17 +238,41 @@ export default function StudentDashboard() {
                 <div className="space-y-4">
                   {courses.slice(0, 2).map((course) => (
                     <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
-                      <img 
-                        src={course.thumbnail} 
-                        alt={course.title}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
+                      <div className="relative">
+                        <img 
+                          src={course.thumbnail} 
+                          alt={course.title}
+                          className="w-16 h-16 rounded-lg object-cover"
+                        />
+                        <div className="absolute -top-1 -right-1">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                            'bg-pink-100 text-pink-800'
+                          }`}>
+                            {course.category}
+                          </span>
+                        </div>
+                      </div>
                       <div className="flex-1">
                         <h4 className="font-semibold">{course.title}</h4>
                         <p className="text-sm text-muted-foreground">{course.instructor}</p>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Module {Math.ceil((course.progress / 100) * course.totalModules)}/{course.totalModules} • {course.currentModule}
+                        </p>
                         <div className="flex items-center space-x-2 mt-2">
                           <Progress value={course.progress} className="flex-1" />
                           <span className="text-sm text-muted-foreground">{course.progress}%</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {course.topics.slice(0, 2).map((topic, index) => (
+                            <span key={index} className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {topic}
+                            </span>
+                          ))}
                         </div>
                       </div>
                       <Button 
@@ -219,28 +328,73 @@ export default function StudentDashboard() {
 
             {/* Skill Progress Chart */}
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-6">Learning Progress</h3>
-              <div className="grid md:grid-cols-3 gap-6">
+              <h3 className="text-xl font-semibold mb-6">Learning Progress by Category</h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Blockchain Development</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                      Blockchain Development
+                    </span>
                     <span className="text-sm text-muted-foreground">75%</span>
                   </div>
                   <Progress value={75} />
+                  <p className="text-xs text-muted-foreground">Smart Contracts, DeFi, Consensus</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Smart Contracts</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                      Web3 Development
+                    </span>
+                    <span className="text-sm text-muted-foreground">45%</span>
+                  </div>
+                  <Progress value={45} />
+                  <p className="text-xs text-muted-foreground">React, Web3.js, DApp Frontend</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                      NFT & Digital Art
+                    </span>
+                    <span className="text-sm text-muted-foreground">90%</span>
+                  </div>
+                  <Progress value={90} />
+                  <p className="text-xs text-muted-foreground">Art Creation, Minting, Metadata</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
+                      DeFi Protocols
+                    </span>
+                    <span className="text-sm text-muted-foreground">30%</span>
+                  </div>
+                  <Progress value={30} />
+                  <p className="text-xs text-muted-foreground">Yield Farming, AMM, Liquidity</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                      Trading & Analytics
+                    </span>
                     <span className="text-sm text-muted-foreground">60%</span>
                   </div>
                   <Progress value={60} />
+                  <p className="text-xs text-muted-foreground">Technical Analysis, Risk Management</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">DeFi Protocols</span>
-                    <span className="text-sm text-muted-foreground">40%</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium flex items-center">
+                      <span className="w-3 h-3 bg-pink-500 rounded-full mr-2"></span>
+                      Metaverse Development
+                    </span>
+                    <span className="text-sm text-muted-foreground">85%</span>
                   </div>
-                  <Progress value={40} />
+                  <Progress value={85} />
+                  <p className="text-xs text-muted-foreground">3D Modeling, VR/AR, Virtual Worlds</p>
                 </div>
               </div>
             </Card>
@@ -258,16 +412,32 @@ export default function StudentDashboard() {
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
+              {courses.slice(0, 3).map((course) => (
                 <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                  <img 
-                    src={course.thumbnail} 
-                    alt={course.title}
-                    className="w-full h-48 object-cover"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={course.thumbnail} 
+                      alt={course.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                        course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                        course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                        course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                        course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                        'bg-pink-100 text-pink-800'
+                      }`}>
+                        {course.category.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
                   <div className="p-6">
                     <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
-                    <p className="text-muted-foreground text-sm mb-4">{course.instructor}</p>
+                    <p className="text-muted-foreground text-sm mb-3">{course.instructor}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{course.skillLevel}</p>
+                    
                     <div className="space-y-4">
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
@@ -277,10 +447,31 @@ export default function StudentDashboard() {
                         <span className="text-primary font-medium">{course.progress}% complete</span>
                       </div>
                       <Progress value={course.progress} />
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Current Module:</p>
+                        <p className="text-sm text-muted-foreground">{course.currentModule} ({course.progress > 0 ? Math.ceil((course.progress / 100) * course.totalModules) : 1}/{course.totalModules})</p>
+                      </div>
+                      
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Next Lesson:</p>
                         <p className="text-sm text-muted-foreground">{course.nextLesson}</p>
                       </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Key Topics:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {course.topics.slice(0, 3).map((topic, index) => (
+                            <span key={index} className="text-xs bg-muted px-2 py-1 rounded">
+                              {topic}
+                            </span>
+                          ))}
+                          {course.topics.length > 3 && (
+                            <span className="text-xs text-muted-foreground">+{course.topics.length - 3} more</span>
+                          )}
+                        </div>
+                      </div>
+                      
                       <Button 
                         className="w-full gradient-primary"
                         onClick={() => navigate(`/course-study/${course.id}`)}
@@ -308,7 +499,19 @@ export default function StudentDashboard() {
                 <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth">
                   <div className="flex items-start justify-between mb-4">
                     <Award className="w-12 h-12 text-primary" />
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                    <div className="flex flex-col items-end space-y-1">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                        cert.category === 'web3' ? 'bg-green-100 text-green-800' :
+                        cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                        cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                        cert.category === 'trading' ? 'bg-red-100 text-red-800' :
+                        'bg-pink-100 text-pink-800'
+                      }`}>
+                        {cert.category}
+                      </span>
+                    </div>
                   </div>
                   <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
                   <div className="space-y-2 text-sm text-muted-foreground">
@@ -351,8 +554,20 @@ export default function StudentDashboard() {
                   <div className="flex items-start justify-between mb-4">
                     <Trophy className="w-12 h-12 text-primary" />
                     <div className="text-right">
-                      <p className="text-lg font-bold text-foreground">{item.price}</p>
-                      <p className="text-sm text-muted-foreground">or {item.skillTokens}</p>
+                      <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
+                        item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                        item.category === 'web3' ? 'bg-green-100 text-green-800' :
+                        item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                        item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                        item.category === 'trading' ? 'bg-red-100 text-red-800' :
+                        'bg-pink-100 text-pink-800'
+                      }`}>
+                        {item.category}
+                      </span>
+                      <div>
+                        <p className="text-lg font-bold text-foreground">{item.price}</p>
+                        <p className="text-sm text-muted-foreground">or {item.skillTokens}</p>
+                      </div>
                     </div>
                   </div>
                   <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
