@@ -17,6 +17,7 @@ import UploadContent from "./pages/UploadContent";
 import IssueCertificate from "./pages/IssueCertificate";
 import TeacherAnalytics from "./pages/TeacherAnalytics";
 import MyCourses from "./pages/MyCourses";
+import MyLearningJourney from "./pages/MyLearningJourney";
 import CourseStudy from "./pages/CourseStudy";
 import BrowseCourses from "./pages/BrowseCourses";
 import CourseProgress from "./pages/CourseProgress";
@@ -63,6 +64,15 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <MyCourses />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/my-learning-journey"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <MyLearningJourney />
                 </ProtectedRoute>
               }
             />

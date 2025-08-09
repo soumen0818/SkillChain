@@ -102,7 +102,7 @@ export default function IssueCertificate() {
   const [isIssuing, setIsIssuing] = useState(false);
 
   // Get teacher's courses
-  const courses = user?.id ? getTeacherCourses(user.id) : [];
+  const courses = user?._id ? getTeacherCourses(user._id) : [];
 
   // Mock student data - in real app, this would come from your backend
   const mockStudents: Student[] = [

@@ -91,7 +91,7 @@ export default function GetCertificate() {
     blockchainHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef12',
     nftTokenId: 'SKL-NFT-001',
     skillsEarned: ['Blockchain Technology', 'Cryptocurrency', 'Smart Contracts', 'DeFi Basics', 'Security Principles'],
-    studentName: user?.name || 'John Doe',
+    studentName: user?.username || 'John Doe',
     issuingOrganization: 'SkillChain Academy',
     validityPeriod: 'Lifetime',
     credentialUrl: 'https://skillchain.com/verify/BC-FUND-2024-001',
@@ -366,6 +366,54 @@ export default function GetCertificate() {
                         {certificateData.isEligible ? 'Generate Certificate' : 'Requirements Needed'}
                       </>
                     )}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0"
+                    onClick={() => {
+                      // Create certificate data for download based on course
+                      const certificateBlob = new Blob([`
+                        CERTIFICATE OF COMPLETION
+                        
+                        This certifies that ${certificateData.studentName}
+                        has successfully completed the course:
+                        
+                        ${certificateData.courseTitle}
+                        
+                        Instructor: ${certificateData.instructor}
+                        Completion Date: ${new Date(certificateData.completionDate).toLocaleDateString()}
+                        Final Score: ${certificateData.score}%
+                        Grade: ${certificateData.grade}
+                        Duration: ${certificateData.duration}
+                        
+                        Credential ID: ${certificateData.credentialId}
+                        Blockchain Hash: ${certificateData.blockchainHash}
+                        
+                        Issued by: ${certificateData.issuingOrganization}
+                        
+                        This certificate is blockchain-verified and can be verified at:
+                        ${certificateData.credentialUrl}
+                      `], { type: 'text/plain' });
+                      
+                      const downloadUrl = URL.createObjectURL(certificateBlob);
+                      const link = document.createElement('a');
+                      link.href = downloadUrl;
+                      link.download = `${certificateData.courseTitle.replace(/\s+/g, '_')}_Certificate.txt`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(downloadUrl);
+                      
+                      toast({
+                        title: "Certificate Downloaded",
+                        description: `Your ${certificateData.courseTitle} certificate has been downloaded successfully.`,
+                      });
+                    }}
+                    disabled={!certificateData.isEligible}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Certificate
                   </Button>
                   
                   <Button variant="outline" className="w-full" onClick={shareCredential}>

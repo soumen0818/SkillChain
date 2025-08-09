@@ -228,7 +228,7 @@ export default function CreateCourse() {
   };
 
   const handleSaveDraft = () => {
-    if (!user?.id) {
+    if (!user?._id) {
       toast({
         title: "Authentication Error",
         description: "Please log in to save a course.",
@@ -261,7 +261,7 @@ export default function CreateCourse() {
       thumbnail: courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null,
       modules: courseData.syllabus.length,
       totalLessons: courseData.syllabus.reduce((total, module) => total + module.lessons.length, 0),
-      teacherId: user.id
+      teacherId: user._id
     });
 
     toast({
@@ -272,7 +272,7 @@ export default function CreateCourse() {
 
   const handlePublish = () => {
     if (validateStep(1) && validateStep(2) && validateStep(3) && validateStep(4)) {
-      if (!user?.id) {
+      if (!user?._id) {
         toast({
           title: "Authentication Error",
           description: "Please log in to publish a course.",
@@ -295,7 +295,7 @@ export default function CreateCourse() {
         thumbnail: courseData.thumbnail ? URL.createObjectURL(courseData.thumbnail) : null,
         modules: courseData.syllabus.length,
         totalLessons: courseData.syllabus.reduce((total, module) => total + module.lessons.length, 0),
-        teacherId: user.id
+        teacherId: user._id
       });
 
       toast({

@@ -43,7 +43,7 @@ export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Get courses for the current teacher
-  const courses = user?.id ? getTeacherCourses(user.id) : [];
+  const courses = user?._id ? getTeacherCourses(user._id) : [];
 
   const handleDeleteCourse = (courseId, courseTitle) => {
     if (window.confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone.`)) {
@@ -104,7 +104,7 @@ export default function TeacherDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user?.name}! 📚
+            Welcome back, {user?.username}! 📚
           </h1>
           <p className="text-muted-foreground mt-2">
             Manage your courses and track your teaching impact
