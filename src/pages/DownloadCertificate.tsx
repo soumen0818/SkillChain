@@ -79,7 +79,7 @@ export default function DownloadCertificate() {
     id: parseInt(courseId || '1'),
     courseTitle: 'Blockchain Fundamentals',
     instructor: 'Dr. Sarah Johnson',
-    studentName: user?.name || 'John Doe',
+    studentName: user?.username || 'John Doe',
     completionDate: '2024-12-09',
     grade: 'A+',
     credentialId: 'BC-FUND-2024-001',

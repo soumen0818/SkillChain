@@ -72,7 +72,7 @@ export default function UploadContent() {
   const [dragActive, setDragActive] = useState(false);
 
   // Get teacher's courses
-  const courses = user?.id ? getTeacherCourses(user.id) : [];
+  const courses = user?._id ? getTeacherCourses(user._id) : [];
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

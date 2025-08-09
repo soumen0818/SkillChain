@@ -91,7 +91,7 @@ export default function GetCertificate() {
     blockchainHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef12',
     nftTokenId: 'SKL-NFT-001',
     skillsEarned: ['Blockchain Technology', 'Cryptocurrency', 'Smart Contracts', 'DeFi Basics', 'Security Principles'],
-    studentName: user?.name || 'John Doe',
+    studentName: user?.username || 'John Doe',
     issuingOrganization: 'SkillChain Academy',
     validityPeriod: 'Lifetime',
     credentialUrl: 'https://skillchain.com/verify/BC-FUND-2024-001',

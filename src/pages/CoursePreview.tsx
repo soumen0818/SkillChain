@@ -162,11 +162,11 @@ export default function CoursePreview() {
               {/* Instructor Info */}
               <div className="flex items-center space-x-4 p-4 bg-white/60 backdrop-blur-sm rounded-lg border border-white/20">
                 <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.name?.charAt(0) || 'T'}
+                  {user?.username?.charAt(0) || 'T'}
                 </div>
                 <div>
                   <p className="font-medium text-sm text-muted-foreground">Created by</p>
-                  <p className="font-semibold">{user?.name || 'Teacher'}</p>
+                  <p className="font-semibold">{user?.username || 'Teacher'}</p>
                   <p className="text-sm text-muted-foreground">Blockchain Expert & Educator</p>
                 </div>
               </div>

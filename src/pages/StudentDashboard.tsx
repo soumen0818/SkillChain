@@ -190,7 +190,7 @@ export default function StudentDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user?.name}! 👋
+            Welcome back, {user?.username}! 👋
           </h1>
           <p className="text-muted-foreground mt-2">
             Continue your learning journey and earn more SkillTokens

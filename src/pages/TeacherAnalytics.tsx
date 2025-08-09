@@ -103,7 +103,7 @@ export default function TeacherAnalytics() {
   const [selectedMetric, setSelectedMetric] = useState('all');
 
   // Get teacher's courses
-  const courses = user?.id ? getTeacherCourses(user.id) : [];
+  const courses = user?._id ? getTeacherCourses(user._id) : [];
 
   // Calculate analytics data
   const analyticsData: AnalyticsData = {
