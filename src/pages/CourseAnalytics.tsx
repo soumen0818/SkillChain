@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCourses } from '@/contexts/CourseContext';
-import { 
+import { courseAPI } from '@/lib/api';
+import {
   ChevronLeft,
   TrendingUp,
   Users,
@@ -19,24 +19,75 @@ import {
   Eye,
   Clock,
   Target,
-  Activity
+  Activity,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function CourseAnalytics() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const { getCourseById } = useCourses();
-  const [course, setCourse] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
-    if (courseId) {
-      const courseData = getCourseById(courseId);
-      setCourse(courseData);
-    }
-  }, [courseId, getCourseById]);
+    const fetchCourseAnalytics = async () => {
+      if (!courseId) return;
 
-  if (!course) {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('Fetching course analytics for courseId:', courseId);
+        const data = await courseAPI.getCourseAnalytics(courseId);
+        setAnalyticsData(data);
+      } catch (err) {
+        console.error('Error fetching course analytics:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch course analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourseAnalytics();
+  }, [courseId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center space-x-2">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <span className="text-lg text-gray-600">Loading course analytics...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Course Analytics</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button onClick={() => navigate('/teacher-dashboard')}>
+                Back to Dashboard
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
     return (
       <div className="min-h-screen bg-background pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,44 +102,7 @@ export default function CourseAnalytics() {
     );
   }
 
-  // Mock analytics data - in real app, this would be fetched from API
-  const analyticsData = {
-    overview: {
-      totalStudents: course.students || 0,
-      completionRate: course.completion || 0,
-      averageRating: course.rating || 0,
-      totalEarnings: course.earnings || '0 ETH',
-      certificatesIssued: course.certificates || 0,
-      skillTokensDistributed: course.skillTokens || '0 SKILL'
-    },
-    trends: {
-      enrollment: [
-        { period: 'Week 1', students: 12, revenue: 1.2 },
-        { period: 'Week 2', students: 18, revenue: 1.8 },
-        { period: 'Week 3', students: 25, revenue: 2.5 },
-        { period: 'Week 4', students: 45, revenue: 4.5 }
-      ],
-      completion: [
-        { module: 'Module 1', completion: 95 },
-        { module: 'Module 2', completion: 88 },
-        { module: 'Module 3', completion: 82 },
-        { module: 'Module 4', completion: 76 },
-        { module: 'Module 5', completion: 70 }
-      ]
-    },
-    students: [
-      { name: 'john.eth', progress: 95, timeSpent: '24h', lastActive: '2h ago', rating: 5 },
-      { name: 'sarah.eth', progress: 88, timeSpent: '22h', lastActive: '1d ago', rating: 5 },
-      { name: 'mike.eth', progress: 76, timeSpent: '18h', lastActive: '3d ago', rating: 4 },
-      { name: 'alice.eth', progress: 82, timeSpent: '20h', lastActive: '1d ago', rating: 5 },
-      { name: 'bob.eth', progress: 92, timeSpent: '26h', lastActive: '5h ago', rating: 4 }
-    ],
-    feedback: [
-      { student: 'john.eth', rating: 5, comment: 'Excellent course! Very detailed and practical.', date: '2 days ago' },
-      { student: 'sarah.eth', rating: 5, comment: 'Great content and well-structured modules.', date: '1 week ago' },
-      { student: 'mike.eth', rating: 4, comment: 'Good course, but could use more examples.', date: '2 weeks ago' }
-    ]
-  };
+  const { course, overview, trends, students, feedback, performance } = analyticsData;
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
@@ -96,8 +110,8 @@ export default function CourseAnalytics() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => navigate('/teacher-dashboard')}
             >
@@ -118,7 +132,7 @@ export default function CourseAnalytics() {
                 <Download className="w-4 h-4 mr-2" />
                 Export Data
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate(`/course-management/${courseId}`)}
               >
@@ -138,7 +152,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Students</p>
-                <p className="text-xl font-bold">{analyticsData.overview.totalStudents}</p>
+                <p className="text-xl font-bold">{overview.totalStudents}</p>
               </div>
             </div>
           </Card>
@@ -150,7 +164,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Completion</p>
-                <p className="text-xl font-bold">{analyticsData.overview.completionRate}%</p>
+                <p className="text-xl font-bold">{overview.completionRate}%</p>
               </div>
             </div>
           </Card>
@@ -162,7 +176,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rating</p>
-                <p className="text-xl font-bold">{analyticsData.overview.averageRating}/5</p>
+                <p className="text-xl font-bold">{overview.averageRating}/5</p>
               </div>
             </div>
           </Card>
@@ -174,7 +188,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Earnings</p>
-                <p className="text-xl font-bold">{analyticsData.overview.totalEarnings}</p>
+                <p className="text-xl font-bold">{overview.totalEarnings}</p>
               </div>
             </div>
           </Card>
@@ -186,7 +200,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Certificates</p>
-                <p className="text-xl font-bold">{analyticsData.overview.certificatesIssued}</p>
+                <p className="text-xl font-bold">{overview.certificatesIssued}</p>
               </div>
             </div>
           </Card>
@@ -198,7 +212,7 @@ export default function CourseAnalytics() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tokens</p>
-                <p className="text-xl font-bold">{analyticsData.overview.skillTokensDistributed}</p>
+                <p className="text-xl font-bold">{overview.skillTokensDistributed}</p>
               </div>
             </div>
           </Card>
@@ -222,7 +236,7 @@ export default function CourseAnalytics() {
                   Enrollment Trend
                 </h3>
                 <div className="space-y-4">
-                  {analyticsData.trends.enrollment.map((data, index) => (
+                  {trends.enrollment.map((data, index) => (
                     <div key={index} className="flex justify-between items-center">
                       <span className="text-sm">{data.period}</span>
                       <div className="flex items-center space-x-4">
@@ -241,7 +255,7 @@ export default function CourseAnalytics() {
                   Module Completion Rates
                 </h3>
                 <div className="space-y-4">
-                  {analyticsData.trends.completion.map((data, index) => (
+                  {trends.completion.map((data, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm">{data.module}</span>
@@ -296,7 +310,7 @@ export default function CourseAnalytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Student Performance</h3>
               <div className="space-y-4">
-                {analyticsData.students.map((student, index) => (
+                {students.map((student, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
@@ -305,6 +319,12 @@ export default function CourseAnalytics() {
                       <div>
                         <p className="font-medium">{student.name}</p>
                         <p className="text-sm text-muted-foreground">Last active: {student.lastActive}</p>
+                        {student.certificateEarned && (
+                          <Badge variant="outline" className="mt-1">
+                            <Award className="w-3 h-3 mr-1" />
+                            Certificate Earned
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-6">
@@ -367,19 +387,19 @@ export default function CourseAnalytics() {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Revenue</span>
-                    <span className="font-medium">{analyticsData.overview.totalEarnings}</span>
+                    <span className="font-medium">{overview.totalEarnings}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Platform Fee</span>
-                    <span className="font-medium">0.2 ETH</span>
+                    <span className="text-muted-foreground">Platform Fee (5%)</span>
+                    <span className="font-medium">{(parseFloat(overview.totalEarnings.split(' ')[0]) * 0.05).toFixed(2)} ETH</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Your Earnings</span>
-                    <span className="font-medium text-primary">3.8 ETH</span>
+                    <span className="font-medium text-primary">{(parseFloat(overview.totalEarnings.split(' ')[0]) * 0.95).toFixed(2)} ETH</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-muted-foreground">Average per Student</span>
-                    <span className="font-medium">0.1 ETH</span>
+                    <span className="font-medium">{overview.totalStudents > 0 ? (parseFloat(overview.totalEarnings.split(' ')[0]) / overview.totalStudents).toFixed(2) : '0'} ETH</span>
                   </div>
                 </div>
               </Card>
@@ -390,25 +410,60 @@ export default function CourseAnalytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Student Feedback</h3>
               <div className="space-y-4">
-                {analyticsData.feedback.map((feedback, index) => (
+                {feedback.map((feedbackItem, index) => (
                   <div key={index} className="p-4 border border-border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">{feedback.student}</span>
+                        <span className="font-medium">{feedbackItem.student}</span>
                         <div className="flex items-center">
                           {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`w-4 h-4 ${i < feedback.rating ? 'text-yellow-500 fill-current' : 'text-gray-300'}`} 
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${i < feedbackItem.rating ? 'text-yellow-500 fill-current' : 'text-gray-300'}`}
                             />
                           ))}
                         </div>
                       </div>
-                      <span className="text-sm text-muted-foreground">{feedback.date}</span>
+                      <span className="text-sm text-muted-foreground">{feedbackItem.date}</span>
                     </div>
-                    <p className="text-muted-foreground">{feedback.comment}</p>
+                    <p className="text-muted-foreground">{feedbackItem.comment}</p>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            {/* Performance Metrics */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-muted-foreground">Engagement Rate</span>
+                    <span className="font-medium">{performance.engagementRate}%</span>
+                  </div>
+                  <Progress value={performance.engagementRate} className="mb-4" />
+
+                  <div className="flex justify-between mb-2">
+                    <span className="text-muted-foreground">Average Session Time</span>
+                    <span className="font-medium">{performance.averageSessionTime}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-muted-foreground">Drop-off Rate</span>
+                    <span className="font-medium">{performance.dropoffRate}%</span>
+                  </div>
+                  <Progress value={performance.dropoffRate} className="mb-4" />
+
+                  <div>
+                    <p className="text-sm font-medium mb-2">Peak Study Hours</p>
+                    {performance.peakStudyHours.map((hour, index) => (
+                      <Badge key={index} variant="outline" className="mr-2 mb-1">
+                        {hour}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               </div>
             </Card>
           </TabsContent>

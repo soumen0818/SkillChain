@@ -7,8 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourses } from '@/contexts/CourseContext';
-import { 
+import { courseAPI } from '@/lib/api';
+import {
   ArrowLeft,
   TrendingUp,
   TrendingDown,
@@ -37,7 +37,8 @@ import {
   Zap,
   Trophy,
   Crown,
-  Gem
+  Gem,
+  Loader2
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -53,6 +54,7 @@ interface AnalyticsData {
   coursePerformance: CoursePerformance[];
   studentEngagement: StudentEngagement;
   revenueBreakdown: RevenueBreakdown;
+  studentDetails: CourseStudentDetails[];
 }
 
 interface MonthlyData {
@@ -78,6 +80,22 @@ interface CoursePerformance {
   category: string;
 }
 
+interface CourseStudentDetails {
+  courseId: string;
+  courseTitle: string;
+  students: StudentDetails[];
+}
+
+interface StudentDetails {
+  id: string;
+  username: string;
+  email: string;
+  enrolledAt: string;
+  progress: number;
+  lastActivity: string;
+  certificateEarned: boolean;
+}
+
 interface StudentEngagement {
   totalWatchTime: string;
   averageSessionTime: string;
@@ -96,62 +114,77 @@ interface RevenueBreakdown {
 
 export default function TeacherAnalytics() {
   const { user } = useAuth();
-  const { getTeacherCourses } = useCourses();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState('6months');
   const [selectedMetric, setSelectedMetric] = useState('all');
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get teacher's courses
-  const courses = user?._id ? getTeacherCourses(user._id) : [];
+  // Fetch analytics data
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('Fetching analytics data...');
+        const data = await courseAPI.getTeacherAnalytics();
+        console.log('Analytics data received:', data);
+        setAnalyticsData(data);
+      } catch (err) {
+        console.error('Error fetching analytics:', err);
+        console.error('Error details:', {
+          message: err instanceof Error ? err.message : 'Unknown error',
+          stack: err instanceof Error ? err.stack : undefined
+        });
+        setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Calculate analytics data
-  const analyticsData: AnalyticsData = {
-    totalCourses: courses.length,
-    activeCourses: courses.filter(c => c.status === 'active').length,
-    draftCourses: courses.filter(c => c.status === 'draft').length,
-    totalStudents: courses.reduce((sum, course) => sum + course.students, 0),
-    totalEarnings: courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0),
-    totalCertificates: courses.reduce((sum, course) => sum + course.certificates, 0),
-    averageRating: courses.length > 0 ? courses.reduce((sum, course) => sum + course.rating, 0) / courses.length : 0,
-    totalReviews: courses.reduce((sum, course) => sum + course.reviews, 0),
-    monthlyData: [
-      { month: 'Jan', earnings: 2.4, students: 45, certificates: 32, courses: 2 },
-      { month: 'Feb', earnings: 3.2, students: 68, certificates: 48, courses: 3 },
-      { month: 'Mar', earnings: 4.1, students: 89, certificates: 65, courses: 4 },
-      { month: 'Apr', earnings: 3.8, students: 76, certificates: 58, courses: 4 },
-      { month: 'May', earnings: 5.2, students: 112, certificates: 89, courses: 5 },
-      { month: 'Jun', earnings: 4.7, students: 98, certificates: 76, courses: 5 }
-    ],
-    coursePerformance: courses.map(course => ({
-      id: course.id,
-      title: course.title,
-      thumbnail: course.thumbnail,
-      status: course.status,
-      students: course.students,
-      completion: course.completion,
-      rating: course.rating,
-      earnings: parseFloat(course.earnings.split(' ')[0]),
-      certificates: course.certificates,
-      enrollmentTrend: course.enrollmentTrend,
-      lastActivity: course.lastUpdated,
-      category: course.category || 'General'
-    })),
-    studentEngagement: {
-      totalWatchTime: '2,847 hours',
-      averageSessionTime: '28 minutes',
-      completionRate: 78,
-      dropoffPoints: ['Module 3: Advanced Concepts', 'Quiz 2: Practical Assessment'],
-      peakHours: ['2:00 PM - 4:00 PM', '7:00 PM - 9:00 PM'],
-      deviceBreakdown: { desktop: 65, mobile: 25, tablet: 10 }
-    },
-    revenueBreakdown: {
-      courseRevenue: courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0),
-      platformFees: courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0) * 0.05,
-      skillTokenRewards: 1250,
-      projectedAnnual: courses.reduce((sum, course) => sum + parseFloat(course.earnings.split(' ')[0]), 0) * 2.3
-    }
-  };
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center space-x-2">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <span className="text-lg text-gray-600">Loading analytics...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Analytics</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
+    return null;
+  }
 
   const getGrowthIndicator = (value: string) => {
     const isPositive = value.startsWith('+');
@@ -183,8 +216,8 @@ export default function TeacherAnalytics() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/teacher-dashboard')}
             className="mb-4"
           >
@@ -235,7 +268,7 @@ export default function TeacherAnalytics() {
                 <div className="flex items-center mt-2">
                   <div className="flex items-center text-green-600">
                     <TrendingUp className="w-4 h-4 mr-1" />
-                    <span className="text-sm">+12% this month</span>
+                    <span className="text-sm">{analyticsData.activeCourses} active</span>
                   </div>
                 </div>
               </div>
@@ -251,9 +284,9 @@ export default function TeacherAnalytics() {
                 <p className="text-green-700 text-sm font-medium">Total Students</p>
                 <p className="text-3xl font-bold text-green-900">{analyticsData.totalStudents}</p>
                 <div className="flex items-center mt-2">
-                  <div className="flex items-center text-green-600">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    <span className="text-sm">+18% this month</span>
+                  <div className="flex items-center text-blue-600">
+                    <Users className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Across all courses</span>
                   </div>
                 </div>
               </div>
@@ -270,8 +303,8 @@ export default function TeacherAnalytics() {
                 <p className="text-3xl font-bold text-purple-900">{analyticsData.totalEarnings.toFixed(1)} ETH</p>
                 <div className="flex items-center mt-2">
                   <div className="flex items-center text-green-600">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    <span className="text-sm">+25% this month</span>
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Revenue generated</span>
                   </div>
                 </div>
               </div>
@@ -287,9 +320,9 @@ export default function TeacherAnalytics() {
                 <p className="text-yellow-700 text-sm font-medium">Certificates Issued</p>
                 <p className="text-3xl font-bold text-yellow-900">{analyticsData.totalCertificates}</p>
                 <div className="flex items-center mt-2">
-                  <div className="flex items-center text-green-600">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    <span className="text-sm">+15% this month</span>
+                  <div className="flex items-center text-blue-600">
+                    <Award className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Achievements earned</span>
                   </div>
                 </div>
               </div>
@@ -324,9 +357,9 @@ export default function TeacherAnalytics() {
                       <div className="text-sm text-muted-foreground">Average Rating</div>
                       <div className="flex items-center justify-center mt-1">
                         {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`w-4 h-4 ${i < Math.floor(analyticsData.averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < Math.floor(analyticsData.averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                           />
                         ))}
                       </div>
@@ -343,21 +376,21 @@ export default function TeacherAnalytics() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Course Completion Rate</span>
-                      <span className="text-sm font-bold">78%</span>
+                      <span className="text-sm font-bold">{analyticsData.studentEngagement.completionRate}%</span>
                     </div>
-                    <Progress value={78} className="h-3" />
-                    
+                    <Progress value={analyticsData.studentEngagement.completionRate} className="h-3" />
+
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Student Satisfaction</span>
-                      <span className="text-sm font-bold">92%</span>
+                      <span className="text-sm font-medium">Course Utilization</span>
+                      <span className="text-sm font-bold">{Math.round((analyticsData.activeCourses / analyticsData.totalCourses) * 100)}%</span>
                     </div>
-                    <Progress value={92} className="h-3" />
-                    
+                    <Progress value={(analyticsData.activeCourses / analyticsData.totalCourses) * 100} className="h-3" />
+
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Revenue Growth</span>
-                      <span className="text-sm font-bold">+25%</span>
+                      <span className="text-sm font-medium">Student Engagement</span>
+                      <span className="text-sm font-bold">{analyticsData.totalStudents > 0 ? Math.round((analyticsData.totalCertificates / analyticsData.totalStudents) * 100) : 0}%</span>
                     </div>
-                    <Progress value={125} className="h-3" />
+                    <Progress value={analyticsData.totalStudents > 0 ? (analyticsData.totalCertificates / analyticsData.totalStudents) * 100 : 0} className="h-3" />
                   </div>
                 </div>
               </Card>
@@ -397,7 +430,7 @@ export default function TeacherAnalytics() {
                   <Clock className="w-8 h-8 text-white" />
                 </div>
                 <h4 className="font-semibold mb-2">Total Watch Time</h4>
-                <p className="text-2xl font-bold text-blue-600">2,847 hours</p>
+                <p className="text-2xl font-bold text-blue-600">{analyticsData.studentEngagement.totalWatchTime}</p>
                 <p className="text-sm text-muted-foreground">Across all courses</p>
               </Card>
 
@@ -406,7 +439,7 @@ export default function TeacherAnalytics() {
                   <Target className="w-8 h-8 text-white" />
                 </div>
                 <h4 className="font-semibold mb-2">Completion Rate</h4>
-                <p className="text-2xl font-bold text-green-600">78%</p>
+                <p className="text-2xl font-bold text-green-600">{analyticsData.studentEngagement.completionRate}%</p>
                 <p className="text-sm text-muted-foreground">Average across courses</p>
               </Card>
 
@@ -415,7 +448,7 @@ export default function TeacherAnalytics() {
                   <Coins className="w-8 h-8 text-white" />
                 </div>
                 <h4 className="font-semibold mb-2">SkillTokens Earned</h4>
-                <p className="text-2xl font-bold text-purple-600">12,450</p>
+                <p className="text-2xl font-bold text-purple-600">{analyticsData.revenueBreakdown.skillTokenRewards.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Total rewards</p>
               </Card>
             </div>
@@ -448,8 +481,8 @@ export default function TeacherAnalytics() {
               {analyticsData.coursePerformance.map((course) => (
                 <Card key={course.id} className="p-6 shadow-lg border-0 hover:shadow-xl transition-all duration-300">
                   <div className="flex items-center space-x-6">
-                    <img 
-                      src={course.thumbnail} 
+                    <img
+                      src={course.thumbnail}
                       alt={course.title}
                       className="w-24 h-24 rounded-lg object-cover"
                     />
@@ -458,7 +491,7 @@ export default function TeacherAnalytics() {
                         <div>
                           <h4 className="text-lg font-semibold mb-2">{course.title}</h4>
                           <div className="flex items-center space-x-4">
-                            <Badge 
+                            <Badge
                               variant={course.status === 'active' ? 'default' : 'secondary'}
                               className={course.status === 'active' ? 'bg-green-500 hover:bg-green-600' : 'bg-yellow-500 hover:bg-yellow-600'}
                             >
@@ -493,9 +526,9 @@ export default function TeacherAnalytics() {
                           <div className="text-sm text-muted-foreground">Rating</div>
                           <div className="flex items-center justify-center mt-1">
                             {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`w-3 h-3 ${i < Math.floor(course.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${i < Math.floor(course.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                               />
                             ))}
                           </div>
@@ -515,7 +548,7 @@ export default function TeacherAnalytics() {
 
           <TabsContent value="students" className="space-y-6">
             <h3 className="text-2xl font-semibold">Student Engagement Analytics</h3>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card className="p-6 shadow-lg border-0">
                 <h4 className="font-semibold mb-4 flex items-center">
@@ -549,8 +582,8 @@ export default function TeacherAnalytics() {
                     <span className="text-sm">Desktop</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
                           style={{ width: `${analyticsData.studentEngagement.deviceBreakdown.desktop}%` }}
                         ></div>
                       </div>
@@ -561,8 +594,8 @@ export default function TeacherAnalytics() {
                     <span className="text-sm">Mobile</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full" 
+                        <div
+                          className="bg-green-600 h-2 rounded-full"
                           style={{ width: `${analyticsData.studentEngagement.deviceBreakdown.mobile}%` }}
                         ></div>
                       </div>
@@ -573,8 +606,8 @@ export default function TeacherAnalytics() {
                     <span className="text-sm">Tablet</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full" 
+                        <div
+                          className="bg-purple-600 h-2 rounded-full"
                           style={{ width: `${analyticsData.studentEngagement.deviceBreakdown.tablet}%` }}
                         ></div>
                       </div>
@@ -623,11 +656,63 @@ export default function TeacherAnalytics() {
                 ))}
               </div>
             </Card>
+
+            {/* Student Details */}
+            {analyticsData.studentDetails && analyticsData.studentDetails.length > 0 && (
+              <Card className="p-6 shadow-lg border-0">
+                <h4 className="font-semibold mb-4 flex items-center">
+                  <Users className="w-5 h-5 mr-2 text-blue-600" />
+                  Student Enrollment Details
+                </h4>
+                <div className="space-y-6">
+                  {analyticsData.studentDetails.map((courseDetails) => (
+                    courseDetails.students && courseDetails.students.length > 0 && (
+                      <div key={courseDetails.courseId} className="border-l-4 border-blue-500 pl-4">
+                        <h5 className="font-medium text-lg mb-3">{courseDetails.courseTitle}</h5>
+                        <div className="grid gap-3">
+                          {courseDetails.students.slice(0, 5).map((student) => (
+                            <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-blue-600 font-semibold text-sm">
+                                    {student.username.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-medium">{student.username}</p>
+                                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="flex items-center space-x-2">
+                                  <Progress value={student.progress || 0} className="w-16 h-2" />
+                                  <span className="text-sm font-medium">{student.progress || 0}%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Enrolled: {new Date(student.enrolledAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {courseDetails.students.length > 5 && (
+                            <div className="text-center p-2">
+                              <span className="text-sm text-muted-foreground">
+                                and {courseDetails.students.length - 5} more students...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="revenue" className="space-y-6">
             <h3 className="text-2xl font-semibold">Revenue & Financial Insights</h3>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="p-6 shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100">
                 <div className="flex items-center justify-between">
@@ -695,8 +780,8 @@ export default function TeacherAnalytics() {
                         <span className="text-sm font-bold">{item.revenue} ETH ({item.percentage}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" 
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
                           style={{ width: `${item.percentage}%` }}
                         ></div>
                       </div>

@@ -105,9 +105,12 @@ export const courseAPI = {
 
     // Get teacher's courses
     getTeacherCourses: async () => {
+        console.log('Making request to teacher courses:', `${API_BASE_URL}/courses/teacher/courses`);
         const response = await fetch(`${API_BASE_URL}/courses/teacher/courses`, {
             headers: createHeaders(),
         });
+
+        console.log('Teacher courses response status:', response.status);
 
         if (!response.ok) {
             throw new Error('Failed to fetch teacher courses');
@@ -143,6 +146,50 @@ export const courseAPI = {
         }
 
         return response.json();
+    },
+
+    // Get teacher analytics
+    getTeacherAnalytics: async () => {
+        console.log('Making request to:', `${API_BASE_URL}/courses/teacher/analytics`);
+        console.log('Headers:', createHeaders());
+
+        const response = await fetch(`${API_BASE_URL}/courses/teacher/analytics`, {
+            headers: createHeaders(),
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('API Error Response:', error);
+            throw new Error(error || 'Failed to fetch teacher analytics');
+        }
+
+        const data = await response.json();
+        console.log('Parsed response data:', data);
+        return data;
+    },
+
+    // Get course-specific analytics
+    getCourseAnalytics: async (courseId: string) => {
+        console.log('Making request to course analytics:', `${API_BASE_URL}/courses/${courseId}/analytics`);
+
+        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/analytics`, {
+            headers: createHeaders(),
+        });
+
+        console.log('Course analytics response status:', response.status);
+
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('Course Analytics API Error:', error);
+            throw new Error(error || 'Failed to fetch course analytics');
+        }
+
+        const data = await response.json();
+        console.log('Course analytics data:', data);
+        return data;
     },
 };
 
