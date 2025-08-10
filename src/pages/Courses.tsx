@@ -7,20 +7,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SEO from '@/components/SEO';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/contexts/CourseContext';
-import { BookOpen, Clock, Star, Users, Award, Loader2 } from 'lucide-react';
+import { walletService } from '@/lib/walletService';
+import { BookOpen, Clock, Star, Users, Award, Loader2, Wallet } from 'lucide-react';
 
 export default function Courses() {
-  const { courses, loading, error, refreshCourses, enrollInCourse } = useCourses();
+  const { user } = useAuth();
+  const { courses, loading, error, refreshCourses, enrollInCourse, enrolledCourses, refreshEnrolledCourses } = useCourses();
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'popular' | 'rating' | 'newest'>('popular');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
 
   useEffect(() => {
     // Refresh courses when component mounts
     refreshCourses();
-  }, []);
+    if (user && user.role === 'student') {
+      refreshEnrolledCourses();
+    }
+  }, [user]);
 
   // Refresh courses when navigating to this page (especially after course creation)
   useEffect(() => {
@@ -28,11 +35,19 @@ export default function Courses() {
   }, [location.pathname]);
 
   const filtered = useMemo(() => {
-    let data = courses.filter(c =>
-      c.status === 'active' && // Only show active courses
-      c.title.toLowerCase().includes(query.toLowerCase()) &&
-      (selectedCategory === 'all' || (c.category && c.category.toLowerCase().includes(selectedCategory.toLowerCase())))
-    );
+    let data = courses.filter(c => {
+      const isActive = c.status === 'active';
+      const matchesQuery = c.title.toLowerCase().includes(query.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || (c.category && c.category.toLowerCase().includes(selectedCategory.toLowerCase()));
+
+      // For students, exclude courses they are already enrolled in
+      const isNotEnrolled = user?.role === 'student'
+        ? !enrolledCourses.some(enrolledCourse =>
+          (enrolledCourse.id || enrolledCourse._id) === (c.id || c._id))
+        : true;
+
+      return isActive && matchesQuery && matchesCategory && isNotEnrolled;
+    });
 
     console.log('Total courses:', courses.length);
     console.log('Active courses:', data.length);
@@ -43,7 +58,7 @@ export default function Courses() {
     if (sort === 'newest') data = [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return data;
-  }, [courses, query, sort, selectedCategory]);
+  }, [courses, query, sort, selectedCategory, user, enrolledCourses]);
 
   const categories = [
     { key: 'all', label: 'All' },
@@ -56,10 +71,92 @@ export default function Courses() {
   ] as const;
 
   const handleEnroll = async (courseId: string) => {
+    if (!user) {
+      alert('Please log in to enroll in courses.');
+      return;
+    }
+
+    // Check if user is a student
+    if (user.role !== 'student') {
+      alert('You are not authorized to buy this course. Only students can enroll in courses.');
+      return;
+    }
+
+    const course = courses.find(c => c.id === courseId || c._id === courseId);
+    if (!course) {
+      alert('Course not found');
+      return;
+    }
+
+    setPaymentLoading(courseId);
+
     try {
+      // Step 1: Check if course is free
+      const coursePrice = parseFloat(course.price || '0');
+
+      if (coursePrice === 0) {
+        // Free course - direct enrollment
+        await enrollInCourse(courseId);
+        await refreshEnrolledCourses();
+        alert('Successfully enrolled in the free course!');
+        const goToDashboard = confirm('Would you like to go to your student dashboard?');
+        if (goToDashboard) {
+          window.location.href = '/student-dashboard';
+        }
+        return;
+      }
+
+      // Step 2: Connect wallet for paid courses
+      const walletInfo = await walletService.connectWallet();
+
+      // Step 3: Check if user has sufficient balance
+      const userBalance = parseFloat(walletInfo.balance);
+      if (userBalance < coursePrice) {
+        alert(`Insufficient balance. You need ${coursePrice} ETH but only have ${userBalance.toFixed(4)} ETH.`);
+        return;
+      }
+
+      // Step 4: Confirm payment
+      const confirmPayment = confirm(
+        `Course: ${course.title}\n` +
+        `Price: ${coursePrice} ETH\n` +
+        `Your Balance: ${userBalance.toFixed(4)} ETH\n\n` +
+        `Do you want to proceed with the payment?`
+      );
+
+      if (!confirmPayment) {
+        return;
+      }
+
+      // Step 5: Process payment
+      const txHash = await walletService.payForCourse(course.price);
+
+      // Step 6: Enroll after successful payment
       await enrollInCourse(courseId);
-    } catch (err) {
-      console.error('Enrollment failed:', err);
+
+      // Refresh enrolled courses to update the list
+      await refreshEnrolledCourses();
+
+      // Step 7: Show success message
+      alert(
+        `Payment successful! 🎉\n\n` +
+        `Transaction Hash: ${txHash}\n` +
+        `Course: ${course.title}\n` +
+        `Amount Paid: ${coursePrice} ETH\n\n` +
+        `You are now enrolled in the course!`
+      );
+
+      // Step 8: Ask if user wants to go to dashboard
+      const goToDashboard = confirm('Would you like to go to your student dashboard to start learning?');
+      if (goToDashboard) {
+        window.location.href = '/student-dashboard';
+      }
+
+    } catch (err: any) {
+      console.error('Enrollment/Payment failed:', err);
+      alert(`Failed to complete enrollment: ${err.message}`);
+    } finally {
+      setPaymentLoading(null);
     }
   };
 
@@ -96,17 +193,38 @@ export default function Courses() {
               <span className="font-medium">{course.price} ETH</span>
               <span className="text-green-600 font-medium">+{course.skillTokenReward} SKILL</span>
             </div>
-            <Button
-              className="w-full gradient-primary"
-              onClick={() => handleEnroll(course.id || course._id)}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <>Enroll & Earn SkillTokens</>
-              )}
-            </Button>
+            {user?.role === 'student' ? (
+              <Button
+                className="w-full gradient-primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleEnroll(course.id || course._id);
+                }}
+                disabled={loading || paymentLoading === (course.id || course._id)}
+              >
+                {paymentLoading === (course.id || course._id) ? (
+                  <>
+                    <Wallet className="w-4 h-4 mr-2 animate-pulse" />
+                    Processing Payment...
+                  </>
+                ) : loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    {parseFloat(course.price || '0') === 0 ? 'Enroll Free' : `Pay ${course.price} ETH & Enroll`}
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                className="w-full bg-gray-400 cursor-not-allowed"
+                disabled
+              >
+                {user ? 'Teachers Cannot Enroll' : 'Login to Enroll'}
+              </Button>
+            )}
           </div>
         </Card>
       ))}

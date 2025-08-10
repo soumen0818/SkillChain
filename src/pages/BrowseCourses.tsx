@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/contexts/CourseContext';
+import { walletService } from '@/lib/walletService';
 import {
   ArrowLeft,
   Search,
@@ -32,6 +33,7 @@ import {
   Globe,
   Code2,
   Database,
+  Wallet,
   Shield,
   Palette,
   BarChart3,
@@ -54,9 +56,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function BrowseCourses() {
   const { user } = useAuth();
-  const { courses, loading, error, refreshCourses, enrollInCourse } = useCourses();
+  const { courses, loading, error, refreshCourses, enrollInCourse, enrolledCourses, refreshEnrolledCourses } = useCourses();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
@@ -66,7 +69,10 @@ export default function BrowseCourses() {
 
   useEffect(() => {
     refreshCourses();
-  }, []);
+    if (user && user.role === 'student') {
+      refreshEnrolledCourses();
+    }
+  }, [user]);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -106,9 +112,15 @@ export default function BrowseCourses() {
       const matchesPrice = priceInETH >= priceRange[0] && priceInETH <= priceRange[1];
       const isActive = course.status === 'active';
 
-      return matchesSearch && matchesCategory && matchesLevel && matchesPrice && isActive;
+      // For students, exclude courses they are already enrolled in
+      const isNotEnrolled = user?.role === 'student'
+        ? !enrolledCourses.some(enrolledCourse =>
+          (enrolledCourse.id || enrolledCourse._id) === (course.id || course._id))
+        : true;
+
+      return matchesSearch && matchesCategory && matchesLevel && matchesPrice && isActive && isNotEnrolled;
     });
-  }, [courses, searchTerm, selectedCategory, selectedLevel, priceRange]);
+  }, [courses, searchTerm, selectedCategory, selectedLevel, priceRange, user, enrolledCourses]);
 
   // Sort courses
   const sortedCourses = useMemo(() => {
@@ -129,17 +141,60 @@ export default function BrowseCourses() {
     });
   }, [filteredCourses, sortBy]);
 
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = async (courseId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     if (!user) {
       navigate('/login');
       return;
     }
 
+    // Check if user is a student
+    if (user.role !== 'student') {
+      alert('You are not authorized to buy this course. Only students can enroll in courses.');
+      return;
+    }
+
+    setPaymentLoading(courseId);
+
     try {
+      // Find the course to get the price
+      const course = sortedCourses.find(c => (c.id || c._id) === courseId);
+      if (!course) {
+        throw new Error('Course not found');
+      }
+
+      // Connect to wallet and pay for the course
+      const wallet = await walletService.connectWallet();
+      if (!wallet) {
+        throw new Error('Wallet connection failed');
+      }
+
+      // Pay for the course
+      const transactionHash = await walletService.payForCourse(course.price || '0.01');
+      if (!transactionHash) {
+        throw new Error('Payment failed');
+      }
+
+      // After successful payment, enroll in the course
       await enrollInCourse(courseId);
-      // Show success message or redirect
+
+      // Refresh enrolled courses to update the list
+      await refreshEnrolledCourses();
+
+      // Show success message
+      alert(`Payment successful! Transaction hash: ${transactionHash}\nYou have been enrolled in the course.`);
+
+      // Navigate to student dashboard
+      navigate('/student-dashboard');
     } catch (err) {
-      console.error('Enrollment failed:', err);
+      console.error('Enrollment/Payment failed:', err);
+      alert(`Failed to complete enrollment: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setPaymentLoading(null);
     }
   };
 
@@ -191,17 +246,33 @@ export default function BrowseCourses() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button
-            className="flex-1 gradient-primary"
-            onClick={() => handleEnroll(course.id || course._id)}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <>Enroll Now</>
-            )}
-          </Button>
+          {user?.role === 'student' ? (
+            <Button
+              className="flex-1 gradient-primary"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleEnroll(course.id || course._id, e);
+              }}
+              disabled={paymentLoading === (course.id || course._id)}
+            >
+              {paymentLoading === (course.id || course._id) ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Pay {course.price || 0.01} ETH & Enroll
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              className="flex-1 bg-gray-400 cursor-not-allowed"
+              disabled
+            >
+              {user ? 'Teachers Cannot Enroll' : 'Login to Enroll'}
+            </Button>
+          )}
           <Button variant="outline" size="sm">
             <Eye className="w-4 h-4" />
           </Button>

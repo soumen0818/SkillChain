@@ -130,6 +130,20 @@ export const courseAPI = {
 
         return response.json();
     },
+
+    // Get enrolled courses for student
+    getEnrolledCourses: async () => {
+        const response = await fetch(`${API_BASE_URL}/courses/student/enrolled`, {
+            headers: createHeaders(),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch enrolled courses');
+        }
+
+        return response.json();
+    },
 };
 
 // Auth API functions

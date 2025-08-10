@@ -1,5 +1,5 @@
-
 const Course = require('../models/Course');
+const User = require('../models/User');
 
 const createCourse = async (req, res) => {
   const {
@@ -44,6 +44,31 @@ const createCourse = async (req, res) => {
     res.status(201).json(createdCourse);
   } catch (error) {
     console.error('Course creation error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const enrollCourse = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    const user = await User.findById(req.user._id);
+
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    if (user.enrolledCourses.includes(course._id)) {
+      return res.status(400).json({ message: 'Already enrolled in this course' });
+    }
+
+    user.enrolledCourses.push(course._id);
+    course.students.push(req.user._id);
+
+    await user.save();
+    await course.save();
+
+    res.json({ message: 'Enrolled successfully' });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -113,27 +138,6 @@ const getTeacherCourses = async (req, res) => {
   }
 };
 
-const enrollCourse = async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id);
-
-    if (course) {
-      // Check if user is already enrolled
-      if (course.students.includes(req.user._id)) {
-        return res.status(400).json({ message: 'Already enrolled in this course' });
-      }
-
-      course.students.push(req.user._id);
-      await course.save();
-      res.json({ message: 'Enrolled successfully' });
-    } else {
-      res.status(404).json({ message: 'Course not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 const deleteCourse = async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -154,6 +158,26 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+const getEnrolledCourses = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'enrolledCourses',
+      populate: {
+        path: 'teacher',
+        select: 'username email'
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user.enrolledCourses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createCourse,
   getCourses,
@@ -162,5 +186,6 @@ module.exports = {
   updateCourse,
   getTeacherCourses,
   enrollCourse,
-  deleteCourse
+  deleteCourse,
+  getEnrolledCourses
 };

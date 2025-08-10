@@ -39,6 +39,7 @@ export interface Course {
 
 interface CourseContextType {
   courses: Course[];
+  enrolledCourses: Course[];
   loading: boolean;
   error: string | null;
   addCourse: (courseData: any) => Promise<string>;
@@ -48,6 +49,7 @@ interface CourseContextType {
   deleteCourse: (courseId: string) => Promise<void>;
   refreshCourses: () => Promise<void>;
   enrollInCourse: (courseId: string) => Promise<void>;
+  refreshEnrolledCourses: () => Promise<void>;
 }
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
@@ -62,6 +64,7 @@ export const useCourses = () => {
 
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -346,6 +349,9 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             : course
         )
       );
+
+      // Refresh enrolled courses after enrollment
+      await refreshEnrolledCourses();
     } catch (err: any) {
       setError(err.message);
       console.error('Failed to enroll in course:', err);
@@ -355,9 +361,53 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const refreshEnrolledCourses = async (): Promise<void> => {
+    try {
+      const enrolledCoursesData = await courseAPI.getEnrolledCourses();
+      // Transform backend course data to frontend format
+      const transformedEnrolledCourses = enrolledCoursesData.map((course: any) => ({
+        id: course._id,
+        _id: course._id,
+        title: course.title || 'Untitled Course',
+        description: course.description || 'No description available',
+        category: course.category || 'General',
+        level: course.level || 'Beginner',
+        duration: course.duration || 'TBD',
+        price: course.price || '0',
+        skillTokenReward: course.skillTokenReward || '0',
+        prerequisites: course.prerequisites || [],
+        learningOutcomes: course.learningOutcomes || [],
+        thumbnail: course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop',
+        status: course.status || 'active',
+        students: course.students ? course.students.length : 0,
+        rating: course.rating || 0,
+        reviews: course.reviews || 0,
+        completion: 0, // TODO: Calculate based on progress
+        earnings: course.earnings || '0 ETH',
+        skillTokens: course.skillTokens || '0 SKILL',
+        lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : 'Recently',
+        modules: course.modules || 0,
+        totalLessons: course.totalLessons || 0,
+        certificates: course.certificates || 0,
+        enrollmentTrend: course.enrollmentTrend || '+0%',
+        createdAt: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '',
+        teacherId: course.teacher?._id || course.teacher,
+        curriculum: course.syllabus || [],
+        syllabus: course.syllabus || [],
+        teacher: course.teacher,
+      }));
+      setEnrolledCourses(transformedEnrolledCourses);
+    } catch (err: any) {
+      console.error('Failed to load enrolled courses:', err);
+      // Set empty array on error
+      setEnrolledCourses([]);
+    }
+  };
+
   return (
     <CourseContext.Provider value={{
       courses,
+      enrolledCourses,
       loading,
       error,
       addCourse,
@@ -367,6 +417,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       deleteCourse,
       refreshCourses,
       enrollInCourse,
+      refreshEnrolledCourses,
     }}>
       {children}
     </CourseContext.Provider>

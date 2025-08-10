@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
@@ -26,6 +25,8 @@ const UserSchema = new mongoose.Schema({
     enum: ['student', 'teacher'],
     default: 'student',
   },
+  enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+  createdCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

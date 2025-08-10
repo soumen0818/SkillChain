@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
-import { 
-  BookOpen, 
-  Trophy, 
-  Coins, 
-  TrendingUp, 
+import { useCourses } from '@/contexts/CourseContext';
+import {
+  BookOpen,
+  Trophy,
+  Coins,
+  TrendingUp,
   PlayCircle,
   Clock,
   Star,
@@ -30,102 +31,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { listings, getActiveListing } = useMarketplace();
+  const { enrolledCourses, refreshEnrolledCourses, loading } = useCourses();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showMyListings, setShowMyListings] = useState(false);
 
+  // Load enrolled courses when component mounts
+  useEffect(() => {
+    if (user) {
+      refreshEnrolledCourses().catch(error => {
+        console.error('Error loading enrolled courses:', error);
+      });
+    }
+  }, [user, refreshEnrolledCourses]);
+
   const stats = [
-    { icon: BookOpen, label: 'Courses Enrolled', value: '3', color: 'text-blue-600' },
+    { icon: BookOpen, label: 'Courses Enrolled', value: (enrolledCourses?.length || 0).toString(), color: 'text-blue-600' },
     { icon: Trophy, label: 'Certificates Earned', value: '3', color: 'text-green-600' },
     { icon: Coins, label: 'SkillTokens', value: '3,750', color: 'text-primary' },
     { icon: TrendingUp, label: 'Learning Streak', value: '18 days', color: 'text-purple-600' }
-  ];
-
-  const courses = [
-    {
-      id: 1,
-      title: 'Blockchain Fundamentals',
-      instructor: 'Dr. Sarah Johnson',
-      progress: 75,
-      duration: '8 weeks',
-      nextLesson: 'Smart Contracts Introduction',
-      thumbnail: 'https://images.unsplash.com/photo-1518896012122-3dcff33c6334?w=300&h=200&fit=crop',
-      category: 'blockchain',
-      topics: ['Blockchain Basics', 'Cryptography', 'Consensus Mechanisms', 'Smart Contracts', 'DeFi Overview'],
-      currentModule: 'Smart Contracts',
-      totalModules: 8,
-      skillLevel: 'Beginner to Intermediate'
-    },
-    {
-      id: 2,
-      title: 'Web3 Development',
-      instructor: 'Mark Thompson',
-      progress: 45,
-      duration: '12 weeks',
-      nextLesson: 'Building DApps with React',
-      thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=300&h=200&fit=crop',
-      category: 'web3',
-      topics: ['JavaScript Fundamentals', 'React.js', 'Web3.js Library', 'Ethers.js', 'DApp Architecture', 'Frontend Integration', 'Wallet Connection', 'Smart Contract Interaction'],
-      currentModule: 'React Integration',
-      totalModules: 12,
-      skillLevel: 'Intermediate to Advanced'
-    },
-    {
-      id: 3,
-      title: 'NFT Art Creation',
-      instructor: 'Lisa Chen',
-      progress: 90,
-      duration: '6 weeks',
-      nextLesson: 'Final Project Review',
-      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop',
-      category: 'nft',
-      topics: ['Digital Art Basics', 'NFT Standards (ERC-721/1155)', 'Metadata Creation', 'IPFS Storage', 'Minting Process', 'Marketplace Listing'],
-      currentModule: 'Final Project',
-      totalModules: 6,
-      skillLevel: 'Beginner to Intermediate'
-    },
-    {
-      id: 4,
-      title: 'DeFi Protocol Development',
-      instructor: 'Alex Rodriguez',
-      progress: 30,
-      duration: '10 weeks',
-      nextLesson: 'Yield Farming Mechanisms',
-      thumbnail: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&h=200&fit=crop',
-      category: 'defi',
-      topics: ['DeFi Fundamentals', 'Liquidity Pools', 'Automated Market Makers', 'Yield Farming', 'Governance Tokens', 'Protocol Security'],
-      currentModule: 'Yield Farming',
-      totalModules: 10,
-      skillLevel: 'Advanced'
-    },
-    {
-      id: 5,
-      title: 'Cryptocurrency Trading',
-      instructor: 'Michael Kim',
-      progress: 60,
-      duration: '8 weeks',
-      nextLesson: 'Risk Management Strategies',
-      thumbnail: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=200&fit=crop',
-      category: 'trading',
-      topics: ['Market Analysis', 'Technical Indicators', 'Trading Psychology', 'Risk Management', 'Portfolio Diversification', 'Trading Bots'],
-      currentModule: 'Risk Management',
-      totalModules: 8,
-      skillLevel: 'Intermediate'
-    },
-    {
-      id: 6,
-      title: 'Metaverse Development',
-      instructor: 'Emma Watson',
-      progress: 85,
-      duration: '14 weeks',
-      nextLesson: 'Virtual World Physics',
-      thumbnail: 'https://images.unsplash.com/photo-1617802690992-15d93263d3a9?w=300&h=200&fit=crop',
-      category: 'metaverse',
-      topics: ['3D Modeling', 'Unity3D', 'VR/AR Integration', 'Virtual Economics', 'Avatar Systems', 'Multiplayer Networking'],
-      currentModule: 'Physics Engine',
-      totalModules: 14,
-      skillLevel: 'Advanced'
-    }
   ];
 
   const certificates = [
@@ -157,7 +81,7 @@ export default function StudentDashboard() {
 
   // Filter active marketplace listings
   const activeMarketplaceListings = listings.filter(listing => listing.status === 'active');
-  const myListings = listings.filter(listing => 
+  const myListings = listings.filter(listing =>
     listing.seller === user?.username && listing.status === 'active'
   );
   const displayedListings = showMyListings ? myListings : activeMarketplaceListings;
@@ -205,8 +129,8 @@ export default function StudentDashboard() {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold">Continue Learning</h3>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => navigate('/my-learning-journey')}
                   >
@@ -214,55 +138,76 @@ export default function StudentDashboard() {
                   </Button>
                 </div>
                 <div className="space-y-4">
-                  {courses.slice(0, 2).map((course) => (
-                    <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
-                      <div className="relative">
-                        <img 
-                          src={course.thumbnail} 
-                          alt={course.title}
-                          className="w-16 h-16 rounded-lg object-cover"
-                        />
-                        <div className="absolute -top-1 -right-1">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                            'bg-pink-100 text-pink-800'
-                          }`}>
-                            {course.category}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{course.title}</h4>
-                        <p className="text-sm text-muted-foreground">{course.instructor}</p>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Module {Math.ceil((course.progress / 100) * course.totalModules)}/{course.totalModules} • {course.currentModule}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Progress value={course.progress} className="flex-1" />
-                          <span className="text-sm text-muted-foreground">{course.progress}%</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {course.topics.slice(0, 2).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {topic}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
+                  {!enrolledCourses || enrolledCourses.length === 0 ? (
+                    <div className="text-center py-8">
+                      <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">No courses enrolled yet.</p>
+                      <Button
                         className="gradient-primary"
-                        onClick={() => navigate(`/course-study/${course.id}`)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate('/browse-courses');
+                        }}
                       >
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Continue
+                        Browse Courses
                       </Button>
                     </div>
-                  ))}
+                  ) : (
+                    enrolledCourses.slice(0, 2).map((course) => (
+                      <div key={course.id || course._id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
+                        <div className="relative">
+                          <img
+                            src={course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop'}
+                            alt={course.title || 'Course'}
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                          <div className="absolute -top-1 -right-1">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                              course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                                course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                  course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                    course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                      'bg-pink-100 text-pink-800'
+                              }`}>
+                              {course.category || 'General'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{course.title || 'Untitled Course'}</h4>
+                          <p className="text-sm text-muted-foreground">{course.teacher?.username || 'Unknown Instructor'}</p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {course.modules || 0} modules • {course.totalLessons || 0} lessons
+                          </p>
+                          <div className="flex items-center space-x-2 mt-2">
+                            <Progress value={course.completion || 0} className="flex-1" />
+                            <span className="text-sm text-muted-foreground">{course.completion || 0}%</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {course.level || 'Beginner'}
+                            </span>
+                            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                              {course.skillTokenReward || 0} SKILL
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gradient-primary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/course-study/${course.id || course._id}`);
+                          }}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Continue
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </Card>
 
@@ -381,86 +326,109 @@ export default function StudentDashboard() {
           <TabsContent value="courses" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My Courses</h3>
-              <Button 
+              <Button
                 className="gradient-primary"
-                onClick={() => navigate('/browse-courses')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/browse-courses');
+                }}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Browse Courses
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.slice(0, 3).map((course) => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                  <div className="relative">
-                    <img 
-                      src={course.thumbnail} 
-                      alt={course.title}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-4 right-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
-                      }`}>
-                        {course.category.toUpperCase()}
-                      </span>
+              {loading ? (
+                <div className="col-span-3 text-center py-8">
+                  <p className="text-muted-foreground">Loading your courses...</p>
+                </div>
+              ) : !enrolledCourses || enrolledCourses.length === 0 ? (
+                <div className="col-span-3 text-center py-8">
+                  <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">You haven't enrolled in any courses yet.</p>
+                  <Button
+                    className="gradient-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate('/browse-courses');
+                    }}
+                  >
+                    Browse Courses
+                  </Button>
+                </div>
+              ) : (
+                enrolledCourses.slice(0, 6).map((course) => (
+                  <Card key={course.id || course._id} className="overflow-hidden hover:shadow-elevation animate-smooth">
+                    <div className="relative">
+                      <img
+                        src={course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop'}
+                        alt={course.title || 'Course'}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute top-4 right-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                          course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                              course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                  'bg-pink-100 text-pink-800'
+                          }`}>
+                          {(course.category || 'General').toUpperCase()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
-                    <p className="text-muted-foreground text-sm mb-3">{course.instructor}</p>
-                    <p className="text-xs text-muted-foreground mb-4">{course.skillLevel}</p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span>{course.duration}</span>
+                    <div className="p-6">
+                      <h4 className="font-semibold text-lg mb-2">{course.title || 'Untitled Course'}</h4>
+                      <p className="text-muted-foreground text-sm mb-3">{course.teacher?.username || 'Unknown Instructor'}</p>
+                      <p className="text-xs text-muted-foreground mb-4">{course.level || 'Beginner'}</p>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span>{course.duration || 'TBD'}</span>
+                          </div>
+                          <span className="text-primary font-medium">{course.completion || 0}% complete</span>
                         </div>
-                        <span className="text-primary font-medium">{course.progress}% complete</span>
-                      </div>
-                      <Progress value={course.progress} />
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Current Module:</p>
-                        <p className="text-sm text-muted-foreground">{course.currentModule} ({course.progress > 0 ? Math.ceil((course.progress / 100) * course.totalModules) : 1}/{course.totalModules})</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Next Lesson:</p>
-                        <p className="text-sm text-muted-foreground">{course.nextLesson}</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Topics:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {course.topics.slice(0, 3).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-2 py-1 rounded">
-                              {topic}
+                        <Progress value={course.completion || 0} />
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Modules:</p>
+                          <p className="text-sm text-muted-foreground">{course.modules || 0} modules • {course.totalLessons || 0} lessons</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Level:</p>
+                          <p className="text-sm text-muted-foreground">{course.level || 'Beginner'}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Reward:</p>
+                          <div className="flex flex-wrap gap-1">
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                              {course.skillTokenReward || 0} SKILL
                             </span>
-                          ))}
-                          {course.topics.length > 3 && (
-                            <span className="text-xs text-muted-foreground">+{course.topics.length - 3} more</span>
-                          )}
+                          </div>
                         </div>
+
+                        <Button
+                          className="w-full gradient-primary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/course-study/${course.id || course._id}`);
+                          }}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Continue Learning
+                        </Button>
                       </div>
-                      
-                      <Button 
-                        className="w-full gradient-primary"
-                        onClick={() => navigate(`/course-study/${course.id}`)}
-                      >
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Continue Learning
-                      </Button>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
@@ -476,61 +444,60 @@ export default function StudentDashboard() {
               {certificates.map((cert) => {
                 const isListed = getActiveListing(cert.id.toString());
                 return (
-                <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
-                  {isListed && (
-                    <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                      <ShoppingCart className="w-3 h-3 mr-1" />
-                      Listed for Sale
-                    </div>
-                  )}
-                  <div className="flex items-start justify-between mb-4">
-                    <Award className="w-12 h-12 text-primary" />
-                    <div className="flex flex-col items-end space-y-1">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        cert.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        cert.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
-                      }`}>
-                        {cert.category}
-                      </span>
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Token ID: {cert.tokenId}</p>
-                    <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
-                    <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                  <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
                     {isListed && (
-                      <p className="font-medium text-green-600">
-                        Listed for: {isListed.price} {isListed.currency}
-                      </p>
+                      <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                        <ShoppingCart className="w-3 h-3 mr-1" />
+                        Listed for Sale
+                      </div>
                     )}
-                  </div>
-                  <div className="flex space-x-2 mt-4">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => navigate(`/verify-certificate/${cert.id}`)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Verify
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
-                      onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
-                      disabled={!!isListed}
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      {isListed ? 'Listed' : 'List for Sale'}
-                    </Button>
-                  </div>
-                </Card>
+                    <div className="flex items-start justify-between mb-4">
+                      <Award className="w-12 h-12 text-primary" />
+                      <div className="flex flex-col items-end space-y-1">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                        <span className={`text-xs px-2 py-1 rounded ${cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                          cert.category === 'web3' ? 'bg-green-100 text-green-800' :
+                            cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                              cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                cert.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                  'bg-pink-100 text-pink-800'
+                          }`}>
+                          {cert.category}
+                        </span>
+                      </div>
+                    </div>
+                    <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>Token ID: {cert.tokenId}</p>
+                      <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
+                      <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                      {isListed && (
+                        <p className="font-medium text-green-600">
+                          Listed for: {isListed.price} {isListed.currency}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => navigate(`/verify-certificate/${cert.id}`)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Verify
+                      </Button>
+                      <Button
+                        size="sm"
+                        className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
+                        onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
+                        disabled={!!isListed}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {isListed ? 'Listed' : 'List for Sale'}
+                      </Button>
+                    </div>
+                  </Card>
                 );
               })}
             </div>
@@ -543,14 +510,14 @@ export default function StudentDashboard() {
                   {showMyListings ? 'My Listings' : 'Certificate Marketplace'}
                 </h3>
                 <p className="text-muted-foreground">
-                  {showMyListings 
+                  {showMyListings
                     ? `You have ${myListings.length} active listing${myListings.length !== 1 ? 's' : ''}`
                     : `${displayedListings.length} certificates available for purchase`
                   }
                 </p>
               </div>
               <div className="flex space-x-2">
-                <Button 
+                <Button
                   variant={showMyListings ? "default" : "outline"}
                   onClick={() => setShowMyListings(!showMyListings)}
                 >
@@ -571,7 +538,7 @@ export default function StudentDashboard() {
                     {showMyListings ? 'No Active Listings' : 'No Certificates Available'}
                   </h4>
                   <p className="text-muted-foreground mb-6">
-                    {showMyListings 
+                    {showMyListings
                       ? 'You haven\'t listed any certificates yet. Start by listing your first certificate!'
                       : 'Be the first to list a certificate in the marketplace.'
                     }
@@ -593,18 +560,17 @@ export default function StudentDashboard() {
                         Your Listing
                       </div>
                     )}
-                    
+
                     <div className="flex items-start justify-between mb-4">
                       <Trophy className="w-12 h-12 text-primary" />
                       <div className="text-right">
-                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
-                          item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
                           item.category === 'web3' ? 'bg-green-100 text-green-800' :
-                          item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                          item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                          item.category === 'trading' ? 'bg-red-100 text-red-800' :
-                          'bg-pink-100 text-pink-800'
-                        }`}>
+                            item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                              item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                item.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                  'bg-pink-100 text-pink-800'
+                          }`}>
                           {item.category}
                         </span>
                         <div>
@@ -619,7 +585,7 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
                     <div className="space-y-1 text-sm text-muted-foreground mb-4">
                       <p>Seller: {item.seller}</p>
@@ -627,17 +593,16 @@ export default function StudentDashboard() {
                       <p>Grade: <span className="font-medium text-foreground">{item.grade}</span></p>
                       <div className="flex items-center justify-between">
                         <span>Rarity:</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
+                        <span className={`px-2 py-1 rounded text-xs ${item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
                           item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
-                          item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                            item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
+                              'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {item.rarity}
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       {item.seller === user?.username ? (
                         <Button size="sm" variant="outline" className="flex-1">
@@ -650,7 +615,7 @@ export default function StudentDashboard() {
                           View Details
                         </Button>
                       )}
-                      
+
                       {item.seller !== user?.username ? (
                         <Button size="sm" className="flex-1 gradient-primary">
                           <ShoppingCart className="w-4 h-4 mr-2" />
@@ -663,7 +628,7 @@ export default function StudentDashboard() {
                         </Button>
                       )}
                     </div>
-                    
+
                     {/* Market stats */}
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <div className="flex justify-between text-xs text-muted-foreground">

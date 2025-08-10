@@ -1,8 +1,13 @@
 // Script to directly update the course in MongoDB
+require('dotenv').config({ path: './server/.env' });
 const { MongoClient } = require('mongodb');
 
 async function updateCourseInDB() {
-    const uri = 'mongodb+srv://sdas721444:soumen12345@cluster0.ldtqlus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+    const uri = process.env.MONGO_URI;
+    if (!uri) {
+        console.error('Error: MONGO_URI is not defined in the .env file');
+        process.exit(1);
+    }
     const client = new MongoClient(uri);
 
     try {
