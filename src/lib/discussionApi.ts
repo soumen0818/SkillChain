@@ -1,22 +1,22 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Get auth token from localStorage
 const getAuthToken = () => {
-    const user = localStorage.getItem('skillchain_user');
-    if (user) {
-        const userData = JSON.parse(user);
-        return userData.token;
-    }
-    return null;
+  const user = localStorage.getItem('skillchain_user');
+  if (user) {
+    const userData = JSON.parse(user);
+    return userData.token;
+  }
+  return null;
 };
 
 // Create headers with auth token
 const createHeaders = () => {
-    const token = getAuthToken();
-    return {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-    };
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
 };
 
 export interface Discussion {
@@ -113,7 +113,7 @@ export interface AddReactionData {
 
 // Get discussions for a course
 export const getCourseDiscussions = async (
-  courseId: string, 
+  courseId: string,
   options?: {
     lessonId?: string;
     type?: string;
@@ -187,8 +187,8 @@ export const addMessage = async (discussionId: string, data: AddMessageData) => 
 
 // Add reaction to message
 export const addReaction = async (
-  discussionId: string, 
-  messageId: string, 
+  discussionId: string,
+  messageId: string,
   data: AddReactionData
 ) => {
   const response = await fetch(
