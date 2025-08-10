@@ -141,55 +141,72 @@ export default function StudentDashboard() {
                   </Button>
                 </div>
                 <div className="space-y-4">
-                  {courses.slice(0, 2).map((course) => (
-                    <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
-                      <div className="relative">
-                        <img 
-                          src={course.thumbnail} 
-                          alt={course.title}
-                          className="w-16 h-16 rounded-lg object-cover"
-                        />
-                        <div className="absolute -top-1 -right-1">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                            'bg-pink-100 text-pink-800'
-                          }`}>
-                            {course.category}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{course.title}</h4>
-                        <p className="text-sm text-muted-foreground">{course.instructor}</p>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Module {Math.ceil((course.progress / 100) * course.totalModules)}/{course.totalModules} • {course.currentModule}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Progress value={course.progress} className="flex-1" />
-                          <span className="text-sm text-muted-foreground">{course.progress}%</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {course.topics.slice(0, 2).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {topic}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
+                  {!enrolledCourses || enrolledCourses.length === 0 ? (
+                    <div className="text-center py-8">
+                      <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">No courses enrolled yet.</p>
+                      <Button
                         className="gradient-primary"
-                        onClick={() => navigate(`/course-study/${course.id}`)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate('/browse-courses');
+                        }}
                       >
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Continue
+                        Browse Courses
                       </Button>
                     </div>
-                  ))}
+                  ) : (
+                    enrolledCourses.slice(0, 2).map((course) => (
+                      <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
+                        <div className="relative">
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                          <div className="absolute -top-1 -right-1">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                                course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                                  course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                    course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                      course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                        'bg-pink-100 text-pink-800'
+                              }`}>
+                              {course.category}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{course.title}</h4>
+                          <p className="text-sm text-muted-foreground">{course.teacher?.username || 'Instructor'}</p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Module {Math.ceil((course.completion / 100) * (course.modules || 1))}/{course.modules || 1} • {course.level}
+                          </p>
+                          <div className="flex items-center space-x-2 mt-2">
+                            <Progress value={course.completion} className="flex-1" />
+                            <span className="text-sm text-muted-foreground">{course.completion}%</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {course.category}
+                            </span>
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {course.level}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gradient-primary"
+                          onClick={() => navigate(`/course-study/${course.id}`)}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Continue
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </Card>
 
@@ -308,7 +325,7 @@ export default function StudentDashboard() {
           <TabsContent value="courses" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My Courses</h3>
-              <Button 
+              <Button
                 className="gradient-primary"
                 onClick={() => navigate('/browse-courses')}
               >
@@ -317,84 +334,102 @@ export default function StudentDashboard() {
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.slice(0, 3).map((course) => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                  <div className="relative">
-                    <img 
-                      src={course.thumbnail} 
-                      alt={course.title}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-4 right-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
-                      }`}>
-                        {course.category.toUpperCase()}
-                      </span>
+              {!enrolledCourses || enrolledCourses.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold mb-2">No Courses Yet</h4>
+                  <p className="text-muted-foreground mb-4">You haven't enrolled in any courses yet.</p>
+                  <Button
+                    className="gradient-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate('/browse-courses');
+                    }}
+                  >
+                    Browse Courses
+                  </Button>
+                </div>
+              ) : (
+                enrolledCourses.slice(0, 6).map((course) => (
+                  <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
+                    <div className="relative">
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute top-4 right-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                              course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                  course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                    'bg-pink-100 text-pink-800'
+                          }`}>
+                          {course.category.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
-                    <p className="text-muted-foreground text-sm mb-3">{course.instructor}</p>
-                    <p className="text-xs text-muted-foreground mb-4">{course.skillLevel}</p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span>{course.duration}</span>
+                    <div className="p-6">
+                      <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
+                      <p className="text-muted-foreground text-sm mb-3">{course.teacher?.username || 'Instructor'}</p>
+                      <p className="text-xs text-muted-foreground mb-4">{course.level}</p>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span>{course.duration}</span>
+                          </div>
+                          <span className="text-primary font-medium">{course.completion}% complete</span>
                         </div>
-                        <span className="text-primary font-medium">{course.progress}% complete</span>
-                      </div>
-                      <Progress value={course.progress} />
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Current Module:</p>
-                        <p className="text-sm text-muted-foreground">{course.currentModule} ({course.progress > 0 ? Math.ceil((course.progress / 100) * course.totalModules) : 1}/{course.totalModules})</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Next Lesson:</p>
-                        <p className="text-sm text-muted-foreground">{course.nextLesson}</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Topics:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {course.topics.slice(0, 3).map((topic, index) => (
-                            <span key={index} className="text-xs bg-muted px-2 py-1 rounded">
-                              {topic}
+                        <Progress value={course.completion} />
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Current Module:</p>
+                          <p className="text-sm text-muted-foreground">{course.level} ({course.completion > 0 ? Math.ceil((course.completion / 100) * (course.modules || 1)) : 1}/{course.modules || 1})</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Next Lesson:</p>
+                          <p className="text-sm text-muted-foreground">Continue Learning</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Key Topics:</p>
+                          <div className="flex flex-wrap gap-1">
+                            <span className="text-xs bg-muted px-2 py-1 rounded">
+                              {course.category}
                             </span>
-                          ))}
-                          {course.topics.length > 3 && (
-                            <span className="text-xs text-muted-foreground">+{course.topics.length - 3} more</span>
-                          )}
+                            <span className="text-xs bg-muted px-2 py-1 rounded">
+                              {course.level}
+                            </span>
+                            <span className="text-xs bg-muted px-2 py-1 rounded">
+                              {course.skillTokenReward} ST
+                            </span>
+                          </div>
                         </div>
+
+                        <Button
+                          className="w-full gradient-primary"
+                          onClick={() => navigate(`/course-study/${course.id}`)}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Continue Learning
+                        </Button>
                       </div>
-                      
-                      <Button 
-                        className="w-full gradient-primary"
-                        onClick={() => navigate(`/course-study/${course.id}`)}
-                      >
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Continue Learning
-                      </Button>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="certificates" className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-semibold">My NFT Certificates</h3>
-              <Button 
+              <Button
                 variant="outline"
                 className="hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5 group"
               >
@@ -406,61 +441,60 @@ export default function StudentDashboard() {
               {certificates.map((cert) => {
                 const isListed = getActiveListing(cert.id.toString());
                 return (
-                <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
-                  {isListed && (
-                    <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                      <ShoppingCart className="w-3 h-3 mr-1" />
-                      Listed for Sale
-                    </div>
-                  )}
-                  <div className="flex items-start justify-between mb-4">
-                    <Award className="w-12 h-12 text-primary" />
-                    <div className="flex flex-col items-end space-y-1">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                        cert.category === 'web3' ? 'bg-green-100 text-green-800' :
-                        cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                        cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                        cert.category === 'trading' ? 'bg-red-100 text-red-800' :
-                        'bg-pink-100 text-pink-800'
-                      }`}>
-                        {cert.category}
-                      </span>
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Token ID: {cert.tokenId}</p>
-                    <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
-                    <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                  <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
                     {isListed && (
-                      <p className="font-medium text-green-600">
-                        Listed for: {isListed.price} {isListed.currency}
-                      </p>
+                      <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                        <ShoppingCart className="w-3 h-3 mr-1" />
+                        Listed for Sale
+                      </div>
                     )}
-                  </div>
-                  <div className="flex space-x-2 mt-4">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => navigate(`/verify-certificate/${cert.id}`)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Verify
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
-                      onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
-                      disabled={!!isListed}
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      {isListed ? 'Listed' : 'List for Sale'}
-                    </Button>
-                  </div>
-                </Card>
+                    <div className="flex items-start justify-between mb-4">
+                      <Award className="w-12 h-12 text-primary" />
+                      <div className="flex flex-col items-end space-y-1">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                        <span className={`text-xs px-2 py-1 rounded ${cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                            cert.category === 'web3' ? 'bg-green-100 text-green-800' :
+                              cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                  cert.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                    'bg-pink-100 text-pink-800'
+                          }`}>
+                          {cert.category}
+                        </span>
+                      </div>
+                    </div>
+                    <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>Token ID: {cert.tokenId}</p>
+                      <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
+                      <p className="font-medium text-foreground">Market Value: {cert.value}</p>
+                      {isListed && (
+                        <p className="font-medium text-green-600">
+                          Listed for: {isListed.price} {isListed.currency}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => navigate(`/verify-certificate/${cert.id}`)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Verify
+                      </Button>
+                      <Button
+                        size="sm"
+                        className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
+                        onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
+                        disabled={!!isListed}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {isListed ? 'Listed' : 'List for Sale'}
+                      </Button>
+                    </div>
+                  </Card>
                 );
               })}
             </div>
@@ -488,7 +522,7 @@ export default function StudentDashboard() {
                   <Users className="w-4 h-4 mr-2 group-hover:animate-pulse" />
                   {showMyListings ? 'View All' : 'My Listings'}
                 </Button>
-                <Button 
+                <Button
                   className="gradient-primary hover:shadow-2xl hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-1"
                   onClick={() => navigate('/list-certificate/new')}
                 >
@@ -511,7 +545,7 @@ export default function StudentDashboard() {
                     }
                   </p>
                   {showMyListings && (
-                    <Button 
+                    <Button
                       className="gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-0.5"
                       onClick={() => navigate('/list-certificate/new')}
                     >
@@ -534,14 +568,13 @@ export default function StudentDashboard() {
                     <div className="flex items-start justify-between mb-4">
                       <Trophy className="w-12 h-12 text-primary group-hover:text-primary/80 group-hover:rotate-12 transition-all duration-300" />
                       <div className="text-right">
-                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${
-                          item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                          item.category === 'web3' ? 'bg-green-100 text-green-800' :
-                          item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                          item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                          item.category === 'trading' ? 'bg-red-100 text-red-800' :
-                          'bg-pink-100 text-pink-800'
-                        }`}>
+                        <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                            item.category === 'web3' ? 'bg-green-100 text-green-800' :
+                              item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                  item.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                    'bg-pink-100 text-pink-800'
+                          }`}>
                           {item.category}
                         </span>
                         <div>
@@ -556,7 +589,7 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
                     <div className="space-y-1 text-sm text-muted-foreground mb-4">
                       <p>Seller: <span className="group-hover:text-foreground transition-colors duration-300">{item.seller}</span></p>
@@ -564,12 +597,11 @@ export default function StudentDashboard() {
                       <p>Grade: <span className="font-medium text-foreground group-hover:text-primary transition-colors duration-300">{item.grade}</span></p>
                       <div className="flex items-center justify-between">
                         <span>Rarity:</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
-                          item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
-                          item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-xs ${item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
+                            item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
+                              item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
+                                'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {item.rarity}
                         </span>
                       </div>
@@ -577,18 +609,18 @@ export default function StudentDashboard() {
 
                     <div className="flex space-x-2">
                       {item.seller === user?.username ? (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="flex-1 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
                         >
                           <Settings className="w-4 h-4 mr-2 group-hover/btn:animate-spin" />
                           Manage
                         </Button>
                       ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="flex-1 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
                           onClick={() => navigate(`/certificate-details/${item.id}`)}
                         >
@@ -598,11 +630,11 @@ export default function StudentDashboard() {
                       )}
 
                       {item.seller !== user?.username ? (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="flex-1 gradient-primary hover:shadow-lg hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 group/btn"
-                          onClick={() => navigate('/wallet', { 
-                            state: { 
+                          onClick={() => navigate('/wallet', {
+                            state: {
                               purchaseData: {
                                 certificateId: item.id,
                                 title: item.title,
@@ -617,9 +649,9 @@ export default function StudentDashboard() {
                           Buy Now
                         </Button>
                       ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="flex-1 hover:bg-secondary hover:text-secondary-foreground hover:shadow-lg hover:shadow-secondary/30 hover:scale-105 transform transition-all duration-300 group/btn"
                         >
                           <Share2 className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
