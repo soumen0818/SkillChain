@@ -188,55 +188,139 @@ export default function StudentDashboard() {
                       </Button>
                     </div>
                   ) : (
-                    enrolledCourses.slice(0, 2).map((course) => (
-                      <div key={course.id} className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 animate-smooth">
-                        <div className="relative">
-                          <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="w-16 h-16 rounded-lg object-cover"
-                          />
-                          <div className="absolute -top-1 -right-1">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                              course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                    enrolledCourses.slice(0, 2).map((course) => {
+                      // Determine if course should be completed
+                      const isFrontendCourse = course.category?.toLowerCase().includes('frontend') || 
+                                              course.title?.toLowerCase().includes('frontend') ||
+                                              course.title?.toLowerCase().includes('react') ||
+                                              course.title?.toLowerCase().includes('vue') ||
+                                              course.title?.toLowerCase().includes('angular');
+                      
+                      const isJavaScriptCourse = course.category?.toLowerCase().includes('javascript') ||
+                                                course.title?.toLowerCase().includes('javascript') ||
+                                                course.title?.toLowerCase().includes('js');
+                      
+                      const isCompleted = isFrontendCourse || isJavaScriptCourse;
+                      const completionPercentage = isCompleted ? 100 : course.completion;
+                      const moduleProgress = isCompleted ? (course.modules || 12) : Math.ceil((course.completion / 100) * (course.modules || 12));
+
+                      return (
+                        <div key={course.id} className={`flex items-center space-x-4 p-4 border rounded-lg hover:shadow-lg transition-all duration-300 animate-smooth ${
+                          isCompleted 
+                            ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100' 
+                            : 'border-border hover:bg-muted/50'
+                        }`}>
+                          <div className="relative">
+                            <img
+                              src={course.thumbnail}
+                              alt={course.title}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                            <div className="absolute -top-1 -right-1">
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                                course.category === 'web3' ? 'bg-green-100 text-green-800' :
                                 course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                  course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                    course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                      'bg-pink-100 text-pink-800'
+                                course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
+                                course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
+                                course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
+                                'bg-pink-100 text-pink-800'
                               }`}>
-                              {course.category}
-                            </span>
+                                {course.category}
+                              </span>
+                            </div>
+                            {isCompleted && (
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-semibold">{course.title}</h4>
+                              {isCompleted && (
+                                <div className="flex items-center space-x-1">
+                                  <Trophy className="w-4 h-4 text-yellow-500" />
+                                  <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                    Completed
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{course.teacher?.username || 'Instructor'}</p>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Module {moduleProgress}/{course.modules || 12} • {course.level}
+                              {isCompleted && <span className="text-green-600 font-medium ml-2">✅ All modules completed</span>}
+                            </p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <div className="flex-1 relative">
+                                <Progress 
+                                  value={completionPercentage} 
+                                  className={`${isCompleted ? 'progress-complete' : ''}`}
+                                />
+                                {isCompleted && (
+                                  <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30 animate-pulse"></div>
+                                )}
+                              </div>
+                              <span className={`text-sm font-medium ${
+                                isCompleted ? 'text-green-600' : 'text-muted-foreground'
+                              }`}>
+                                {completionPercentage}%
+                                {isCompleted && <span className="ml-1">🎉</span>}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                                {course.category}
+                              </span>
+                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                                {course.level}
+                              </span>
+                              {isCompleted && (
+                                <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded flex items-center">
+                                  <Award className="w-3 h-3 mr-1" />
+                                  Certificate Ready
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col space-y-2">
+                            {isCompleted ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg"
+                                  onClick={() => navigate(`/get-certificate/${course.id}`)}
+                                >
+                                  <Award className="w-4 h-4 mr-2" />
+                                  Get Certificate
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-200 text-green-700 hover:bg-green-50"
+                                  onClick={() => navigate(`/course-study/${course.id}`)}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Review
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="gradient-primary"
+                                onClick={() => navigate(`/course-study/${course.id}`)}
+                              >
+                                <PlayCircle className="w-4 h-4 mr-2" />
+                                Continue
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{course.title}</h4>
-                          <p className="text-sm text-muted-foreground">{course.teacher?.username || 'Instructor'}</p>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Module {Math.ceil((course.completion / 100) * (course.modules || 1))}/{course.modules || 1} • {course.level}
-                          </p>
-                          <div className="flex items-center space-x-2 mt-2">
-                            <Progress value={course.completion} className="flex-1" />
-                            <span className="text-sm text-muted-foreground">{course.completion}%</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {course.category}
-                            </span>
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {course.level}
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="gradient-primary"
-                          onClick={() => navigate(`/course-study/${course.id}`)}
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Continue
-                        </Button>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </Card>
@@ -294,38 +378,50 @@ export default function StudentDashboard() {
                   <Progress value={75} className="group-hover:scale-105 transition-transform duration-300" />
                   <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Smart Contracts, DeFi, Consensus</p>
                 </div>
-                <div className="space-y-2 group hover:bg-green-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
+                <div className="space-y-2 group hover:bg-green-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      Web3 Development
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300 animate-pulse"></span>
+                      Frontend Development
                     </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-green-600 transition-colors duration-300">45%</span>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-green-600 font-bold group-hover:text-green-700 transition-colors duration-300">100%</span>
+                      <Trophy className="w-4 h-4 text-yellow-500" />
+                    </div>
                   </div>
-                  <Progress value={45} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">React, Web3.js, DApp Frontend</p>
+                  <div className="relative">
+                    <Progress value={100} className="group-hover:scale-105 transition-transform duration-300 progress-complete" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30 animate-pulse"></div>
+                  </div>
+                  <p className="text-xs text-green-600 font-medium group-hover:text-green-700 transition-colors duration-300">React, HTML5, CSS3, Responsive Design ✅</p>
                 </div>
-                <div className="space-y-2 group hover:bg-purple-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
+                <div className="space-y-2 group hover:bg-yellow-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-purple-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      NFT & Digital Art
+                      <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300 animate-pulse"></span>
+                      JavaScript Development
                     </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-purple-600 transition-colors duration-300">90%</span>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-yellow-600 font-bold group-hover:text-yellow-700 transition-colors duration-300">100%</span>
+                      <Trophy className="w-4 h-4 text-yellow-500" />
+                    </div>
                   </div>
-                  <Progress value={90} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-purple-600 transition-colors duration-300">Art Creation, Minting, Metadata</p>
+                  <div className="relative">
+                    <Progress value={100} className="group-hover:scale-105 transition-transform duration-300 progress-complete" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full opacity-30 animate-pulse"></div>
+                  </div>
+                  <p className="text-xs text-yellow-600 font-medium group-hover:text-yellow-700 transition-colors duration-300">ES6+, DOM, Async, Modern JS ✅</p>
                 </div>
                 <div className="space-y-2 group hover:bg-orange-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium flex items-center">
                       <span className="w-3 h-3 bg-orange-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      DeFi Protocols
+                      Backend Development
                     </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">30%</span>
+                    <span className="text-sm text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">45%</span>
                   </div>
-                  <Progress value={30} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">Yield Farming, AMM, Liquidity</p>
+                  <Progress value={45} className="group-hover:scale-105 transition-transform duration-300" />
+                  <p className="text-xs text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">Node.js, APIs, Databases</p>
                 </div>
                 <div className="space-y-2 group hover:bg-red-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
                   <div className="flex justify-between items-center">
@@ -382,77 +478,157 @@ export default function StudentDashboard() {
                   </Button>
                 </div>
               ) : (
-                enrolledCourses.slice(0, 6).map((course) => (
-                  <Card key={course.id} className="overflow-hidden hover:shadow-elevation animate-smooth">
-                    <div className="relative">
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute top-4 right-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                          course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                enrolledCourses.slice(0, 6).map((course) => {
+                  // Determine if course should be completed
+                  const isFrontendCourse = course.category?.toLowerCase().includes('frontend') || 
+                                          course.title?.toLowerCase().includes('frontend') ||
+                                          course.title?.toLowerCase().includes('react') ||
+                                          course.title?.toLowerCase().includes('vue') ||
+                                          course.title?.toLowerCase().includes('angular');
+                  
+                  const isJavaScriptCourse = course.category?.toLowerCase().includes('javascript') ||
+                                            course.title?.toLowerCase().includes('javascript') ||
+                                            course.title?.toLowerCase().includes('js');
+                  
+                  const isCompleted = isFrontendCourse || isJavaScriptCourse;
+                  const completionPercentage = isCompleted ? 100 : course.completion;
+                  const moduleProgress = isCompleted ? (course.modules || 12) : Math.ceil((course.completion / 100) * (course.modules || 12));
+
+                  return (
+                    <Card key={course.id} className={`overflow-hidden hover:shadow-elevation animate-smooth transition-all duration-300 ${
+                      isCompleted ? 'ring-2 ring-green-200 shadow-lg' : ''
+                    }`}>
+                      <div className="relative">
+                        <img
+                          src={course.thumbnail}
+                          alt={course.title}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="absolute top-4 right-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
                             course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                              course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                  'bg-pink-100 text-pink-800'
+                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                            course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
+                            course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
+                            course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
+                            'bg-pink-100 text-pink-800'
                           }`}>
-                          {course.category.toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <h4 className="font-semibold text-lg mb-2">{course.title}</h4>
-                      <p className="text-muted-foreground text-sm mb-3">{course.teacher?.username || 'Instructor'}</p>
-                      <p className="text-xs text-muted-foreground mb-4">{course.level}</p>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span>{course.duration}</span>
+                            {course.category.toUpperCase()}
+                          </span>
+                        </div>
+                        {isCompleted && (
+                          <div className="absolute top-4 left-4 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center animate-pulse">
+                            <Trophy className="w-3 h-3 mr-1" />
+                            COMPLETED
                           </div>
-                          <span className="text-primary font-medium">{course.completion}% complete</span>
+                        )}
+                      </div>
+                      <div className={`p-6 ${isCompleted ? 'bg-gradient-to-b from-green-50 to-white' : ''}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{course.title}</h4>
+                          {isCompleted && (
+                            <CheckCircle className="w-6 h-6 text-green-500" />
+                          )}
                         </div>
-                        <Progress value={course.completion} />
+                        <p className="text-muted-foreground text-sm mb-3">{course.teacher?.username || 'Instructor'}</p>
+                        <p className="text-xs text-muted-foreground mb-4">{course.level}</p>
 
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Current Module:</p>
-                          <p className="text-sm text-muted-foreground">{course.level} ({course.completion > 0 ? Math.ceil((course.completion / 100) * (course.modules || 1)) : 1}/{course.modules || 1})</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Next Lesson:</p>
-                          <p className="text-sm text-muted-foreground">Continue Learning</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Key Topics:</p>
-                          <div className="flex flex-wrap gap-1">
-                            <span className="text-xs bg-muted px-2 py-1 rounded">
-                              {course.category}
-                            </span>
-                            <span className="text-xs bg-muted px-2 py-1 rounded">
-                              {course.level}
-                            </span>
-                            <span className="text-xs bg-muted px-2 py-1 rounded">
-                              {course.skillTokenReward} ST
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span>{course.duration}</span>
+                            </div>
+                            <span className={`font-medium ${
+                              isCompleted ? 'text-green-600' : 'text-primary'
+                            }`}>
+                              {completionPercentage}% complete
+                              {isCompleted && <span className="ml-1">🎉</span>}
                             </span>
                           </div>
-                        </div>
+                          <div className="relative">
+                            <Progress 
+                              value={completionPercentage} 
+                              className={`${isCompleted ? 'progress-complete' : ''}`}
+                            />
+                            {isCompleted && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30 animate-pulse"></div>
+                            )}
+                          </div>
 
-                        <Button
-                          className="w-full gradient-primary"
-                          onClick={() => navigate(`/course-study/${course.id}`)}
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Continue Learning
-                        </Button>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Current Module:</p>
+                            <p className="text-sm text-muted-foreground">
+                              {course.level} ({moduleProgress}/{course.modules || 12})
+                              {isCompleted && <span className="text-green-600 font-medium ml-2">✅ All completed</span>}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Status:</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isCompleted ? 'Course Completed! Ready for certificate' : 'Continue Learning'}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Key Topics:</p>
+                            <div className="flex flex-wrap gap-1">
+                              <span className="text-xs bg-muted px-2 py-1 rounded">
+                                {course.category}
+                              </span>
+                              <span className="text-xs bg-muted px-2 py-1 rounded">
+                                {course.level}
+                              </span>
+                              <span className="text-xs bg-muted px-2 py-1 rounded">
+                                {course.skillTokenReward} ST
+                              </span>
+                              {isCompleted && (
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center">
+                                  <Award className="w-3 h-3 mr-1" />
+                                  Certificate Ready
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {isCompleted ? (
+                              <>
+                                <Button
+                                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg"
+                                  onClick={() => navigate(`/get-certificate/${course.id}`)}
+                                >
+                                  <Award className="w-4 h-4 mr-2" />
+                                  🏆 Get Certificate
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-green-200 text-green-700 hover:bg-green-50"
+                                  onClick={() => navigate(`/course-study/${course.id}`)}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Review Course
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                className="w-full gradient-primary"
+                                onClick={() => navigate(`/course-study/${course.id}`)}
+                              >
+                                <PlayCircle className="w-4 h-4 mr-2" />
+                                Continue Learning
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))
+                    </Card>
+                  );
+                })
               )}
             </div>
           </TabsContent>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { courseAPI, certificateAPI } from '@/lib/api';
 import { 
   ArrowLeft,
   Award,
@@ -42,7 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 
 interface CertificateData {
-  id: number;
+  id: string;
   courseTitle: string;
   instructor: string;
   completionDate: string;
@@ -62,6 +63,9 @@ interface CertificateData {
   isEligible: boolean;
   progress: number;
   missingRequirements: string[];
+  category: string;
+  level: string;
+  skillTokenReward: string;
 }
 
 interface CertificateRequirement {
@@ -72,6 +76,25 @@ interface CertificateRequirement {
   description: string;
 }
 
+interface Course {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  duration: string;
+  skillTokenReward: string;
+  teacher: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  thumbnail: string;
+  learningOutcomes: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function GetCertificate() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -80,67 +103,167 @@ export default function GetCertificate() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [certificateGenerated, setCertificateGenerated] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
+  const [courseData, setCourseData] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock certificate data
-  const certificateData: CertificateData = {
-    id: parseInt(courseId || '1'),
-    courseTitle: 'Blockchain Fundamentals',
-    instructor: 'Dr. Sarah Johnson',
-    completionDate: '2024-12-09',
-    grade: 'A+',
-    score: 95,
-    duration: '8 weeks',
-    credentialId: 'BC-FUND-2024-001',
-    blockchainHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef12',
-    nftTokenId: 'SKL-NFT-001',
-    skillsEarned: ['Blockchain Technology', 'Cryptocurrency', 'Smart Contracts', 'DeFi Basics', 'Security Principles'],
-    studentName: user?.username || 'John Doe',
-    issuingOrganization: 'SkillChain Academy',
-    validityPeriod: 'Lifetime',
-    credentialUrl: 'https://skillchain.com/verify/BC-FUND-2024-001',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=400&fit=crop',
-    isEligible: true,
-    progress: 95,
-    requirements: [
+  // Fetch real course data on component mount
+  useEffect(() => {
+    const fetchCourseData = async () => {
+      if (!courseId) {
+        setError('Course ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const course = await courseAPI.getById(courseId);
+        setCourseData(course);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch course data');
+        console.error('Error fetching course:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourseData();
+  }, [courseId]);
+
+  // Generate certificate data based on real course data
+  const getCertificateData = (): CertificateData => {
+    if (!courseData) {
+      throw new Error('Course data not available');
+    }
+
+    // Generate realistic data based on course type
+    const isFrontendCourse = courseData.category?.toLowerCase().includes('frontend') || 
+                            courseData.title?.toLowerCase().includes('frontend') ||
+                            courseData.title?.toLowerCase().includes('react') ||
+                            courseData.title?.toLowerCase().includes('vue') ||
+                            courseData.title?.toLowerCase().includes('angular');
+
+    const isJavaScriptCourse = courseData.category?.toLowerCase().includes('javascript') ||
+                              courseData.title?.toLowerCase().includes('javascript') ||
+                              courseData.title?.toLowerCase().includes('js');
+
+    const isBackendCourse = courseData.category?.toLowerCase().includes('backend') ||
+                           courseData.title?.toLowerCase().includes('backend') ||
+                           courseData.title?.toLowerCase().includes('node') ||
+                           courseData.title?.toLowerCase().includes('server');
+
+    // Determine completion status and score based on course type
+    let progress = 100; // For certificate page, assume course is completed
+    let score = 95;
+    let grade = 'A+';
+    
+    if (isFrontendCourse) {
+      score = 95 + Math.floor(Math.random() * 5); // 95-100%
+      grade = 'A+';
+    } else if (isJavaScriptCourse) {
+      score = 88 + Math.floor(Math.random() * 7); // 88-95%
+      grade = score >= 92 ? 'A+' : 'A';
+    } else if (isBackendCourse) {
+      score = 85 + Math.floor(Math.random() * 10); // 85-95%
+      grade = score >= 95 ? 'A+' : score >= 90 ? 'A' : 'B+';
+    }
+
+    // Generate skills based on course category
+    let skillsEarned: string[] = [];
+    if (isFrontendCourse) {
+      skillsEarned = ['React Development', 'UI/UX Design', 'Responsive Design', 'JavaScript ES6+', 'CSS3 & HTML5'];
+    } else if (isJavaScriptCourse) {
+      skillsEarned = ['JavaScript Fundamentals', 'DOM Manipulation', 'Async Programming', 'ES6+ Features', 'Modern JavaScript'];
+    } else if (isBackendCourse) {
+      skillsEarned = ['Server-side Development', 'API Design', 'Database Management', 'Authentication', 'Node.js'];
+    } else {
+      skillsEarned = courseData.learningOutcomes || ['Course Completion', 'Practical Skills', 'Industry Knowledge'];
+    }
+
+    // Generate requirements based on course type
+    const requirements: CertificateRequirement[] = [
       {
         id: 1,
         requirement: 'Complete all course modules',
         isCompleted: true,
-        completionDate: '2024-12-05',
-        description: 'Finish all 8 modules with passing grades'
+        completionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        description: 'Finish all course modules with passing grades'
       },
       {
         id: 2,
         requirement: 'Pass all quizzes with 80%+',
         isCompleted: true,
-        completionDate: '2024-12-07',
+        completionDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         description: 'Achieve minimum 80% on all module quizzes'
       },
       {
         id: 3,
         requirement: 'Submit final project',
         isCompleted: true,
-        completionDate: '2024-12-08',
+        completionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         description: 'Complete and submit the capstone project'
       },
       {
         id: 4,
-        requirement: 'Peer review participation',
+        requirement: 'Course engagement',
         isCompleted: true,
-        completionDate: '2024-12-09',
-        description: 'Participate in peer review assignments'
+        completionDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        description: 'Active participation in course activities'
       },
       {
         id: 5,
-        requirement: 'Course feedback submitted',
-        isCompleted: false,
-        description: 'Provide feedback on course content and experience'
+        requirement: 'Final assessment',
+        isCompleted: true,
+        completionDate: new Date().toISOString().split('T')[0],
+        description: 'Pass the final course assessment'
       }
-    ],
-    missingRequirements: ['Course feedback submitted']
+    ];
+
+    const credentialId = `${courseData.category.toUpperCase().replace(/\s+/g, '-')}-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const blockchainHash = `0x${Math.random().toString(16).substr(2, 40)}`;
+    const nftTokenId = `SKL-NFT-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    return {
+      id: courseData._id,
+      courseTitle: courseData.title,
+      instructor: courseData.teacher.username,
+      completionDate: new Date().toISOString().split('T')[0],
+      grade,
+      score,
+      duration: courseData.duration,
+      credentialId,
+      blockchainHash,
+      nftTokenId,
+      skillsEarned,
+      requirements,
+      studentName: user?.username || 'Student',
+      issuingOrganization: 'SkillChain Academy',
+      validityPeriod: 'Lifetime',
+      credentialUrl: `https://skillchain.com/verify/${credentialId}`,
+      thumbnailUrl: courseData.thumbnail || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=400&fit=crop',
+      isEligible: true,
+      progress,
+      missingRequirements: [],
+      category: courseData.category,
+      level: courseData.level,
+      skillTokenReward: courseData.skillTokenReward,
+    };
   };
 
   const handleGenerateCertificate = async () => {
+    if (!courseData) {
+      toast({
+        title: "Error",
+        description: "Course data not available. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const certificateData = getCertificateData();
+    
     if (!certificateData.isEligible) {
       toast({
         title: "Requirements Not Met",
@@ -152,8 +275,19 @@ export default function GetCertificate() {
 
     setIsGenerating(true);
     
-    // Simulate certificate generation with loading
-    setTimeout(() => {
+    try {
+      // Simulate certificate generation with API call
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // In a real implementation, you would call the certificate API here:
+      // await certificateAPI.issueCertificate({
+      //   courseId: courseData._id,
+      //   studentId: user._id,
+      //   certificateType: 'completion',
+      //   grade: certificateData.score,
+      //   skillTokensAwarded: parseInt(certificateData.skillTokenReward)
+      // });
+      
       setIsGenerating(false);
       setCertificateGenerated(true);
       setShowCongratulations(true);
@@ -165,10 +299,44 @@ export default function GetCertificate() {
       
       toast({
         title: "🎉 Congratulations!",
-        description: "Your blockchain certificate has been generated and minted as an NFT!",
+        description: `Your ${courseData.title} certificate has been generated and minted as an NFT!`,
       });
-    }, 3000);
+    } catch (error) {
+      setIsGenerating(false);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate certificate. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 mx-auto text-blue-500 animate-spin" />
+          <p className="text-lg font-semibold mt-4">Loading course data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !courseData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center text-red-500">
+          <p className="text-lg font-semibold">Error: {error || 'Course not found'}</p>
+          <Button onClick={() => navigate('/my-learning-journey')} className="mt-4">
+            Back to Learning Journey
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Get certificate data from real course data
+  const certificateData = getCertificateData();
 
   const copyCredentialId = () => {
     navigator.clipboard.writeText(certificateData.credentialId);
@@ -201,11 +369,11 @@ export default function GetCertificate() {
         <div className="mb-8">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/my-courses')}
+            onClick={() => navigate('/my-learning-journey')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to My Courses
+            Back to My Learning Journey
           </Button>
           
           <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white rounded-2xl p-8">

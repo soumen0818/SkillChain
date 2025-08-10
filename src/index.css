@@ -153,6 +153,12 @@ All colors MUST be HSL.
   .animate-glow {
     animation: glow 2s ease-in-out infinite;
   }
+  
+  .progress-complete [data-progress-bar] {
+    background: linear-gradient(90deg, #10b981, #059669) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    animation: progressComplete 2s ease-in-out infinite;
+  }
 }
 
 @keyframes float {
@@ -201,4 +207,15 @@ All colors MUST be HSL.
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
   50% { box-shadow: 0 0 20px rgba(255, 193, 7, 0.8), 0 0 30px rgba(255, 193, 7, 0.6); }
+}
+
+@keyframes progressComplete {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    filter: brightness(1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 0 30px rgba(16, 185, 129, 0.6);
+    filter: brightness(1.1);
+  }
 }
