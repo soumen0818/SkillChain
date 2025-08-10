@@ -153,7 +153,7 @@ export default function UploadContent() {
     return <File className="w-5 h-5 text-gray-500" />;
   };
 
-  const handleSaveModule = () => {
+  const handleSaveModule = async () => {
     if (!selectedCourse) {
       toast({
         title: "Error",
@@ -181,40 +181,93 @@ export default function UploadContent() {
       return;
     }
 
-    const course = getCourseById(selectedCourse);
-    if (!course) return;
+    setIsUploading(true);
+    
+    try {
+      const course = getCourseById(selectedCourse);
+      if (!course) {
+        throw new Error("Course not found");
+      }
 
-    const newModule = {
-      ...currentModule,
-      id: Math.random().toString(36).substr(2, 9),
-      files: uploadedFiles,
-      order: (course.curriculum?.length || 0) + 1
-    };
+      // Create the new module with proper structure for backend
+      const newModule = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: currentModule.title.trim(),
+        description: currentModule.description.trim(),
+        lessons: uploadedFiles.map((file, index) => {
+          const lessonType = file.type.startsWith('video/') ? 'video' : 'document';
+          const baseLesson = {
+            id: Math.random().toString(36).substr(2, 9),
+            title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
+            type: lessonType,
+            description: `${currentModule.type} content - ${formatFileSize(file.size)}`,
+            duration: currentModule.duration,
+            order: index + 1
+          };
 
-    const updatedCourse = {
-      ...course,
-      curriculum: [...(course.curriculum || []), newModule]
-    };
+          // Add the URL to the appropriate field based on type
+          if (lessonType === 'video') {
+            return {
+              ...baseLesson,
+              videoUrl: file.url || '',
+              content: `Video lesson: ${baseLesson.title}`
+            };
+          } else {
+            return {
+              ...baseLesson,
+              documentUrl: file.url || '',
+              content: `Document lesson: ${baseLesson.title}`
+            };
+          }
+        })
+      };
 
-    updateCourse(selectedCourse, updatedCourse);
+      // Get existing syllabus or create empty array
+      const existingSyllabus = course.syllabus || [];
+      
+      // Add the new module to syllabus
+      const updatedSyllabus = [...existingSyllabus, newModule];
 
-    toast({
-      title: "Module Added Successfully!",
-      description: `"${currentModule.title}" has been added to ${course.title}.`,
-    });
+      // Update the course with new module
+      const updateData = {
+        syllabus: updatedSyllabus,
+        modules: updatedSyllabus.length,
+        totalLessons: updatedSyllabus.reduce((total, module) => total + (module.lessons?.length || 0), 0)
+      };
 
-    // Reset form
-    setCurrentModule({
-      id: '',
-      title: '',
-      description: '',
-      duration: '',
-      type: 'video',
-      files: [],
-      order: 1
-    });
-    setUploadedFiles([]);
-    setSelectedCourse('');
+      // Save to backend
+      await updateCourse(selectedCourse, updateData);
+
+      toast({
+        title: "Module Added Successfully! 🎉",
+        description: `"${currentModule.title}" has been added to ${course.title} with ${uploadedFiles.length} lesson(s).`,
+      });
+
+      // Reset form
+      setCurrentModule({
+        id: '',
+        title: '',
+        description: '',
+        duration: '',
+        type: 'video',
+        files: [],
+        order: 1
+      });
+      setUploadedFiles([]);
+      
+      // Don't clear selected course to allow adding more modules
+      // setSelectedCourse('');
+
+    } catch (error) {
+      console.error('Error saving module:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add module to course.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const selectedCourseData = selectedCourse ? getCourseById(selectedCourse) : null;
@@ -265,7 +318,7 @@ export default function UploadContent() {
                         <div>
                           <p className="font-medium">{course.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {course.curriculum?.length || 0} modules
+                            {course.syllabus?.length || 0} modules • {course.totalLessons || 0} lessons
                           </p>
                         </div>
                       </div>
@@ -285,7 +338,7 @@ export default function UploadContent() {
                     <div className="flex-1">
                       <h4 className="font-semibold text-indigo-900">{selectedCourseData.title}</h4>
                       <p className="text-sm text-indigo-600">
-                        {selectedCourseData.curriculum?.length || 0} existing modules
+                        {selectedCourseData.syllabus?.length || 0} existing modules • {selectedCourseData.totalLessons || 0} lessons
                       </p>
                     </div>
                     <Badge className="bg-indigo-100 text-indigo-700">
@@ -510,7 +563,11 @@ export default function UploadContent() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span>Current modules</span>
-                    <span className="font-medium">{selectedCourseData.curriculum?.length || 0}</span>
+                    <span className="font-medium">{selectedCourseData.syllabus?.length || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Total lessons</span>
+                    <span className="font-medium">{selectedCourseData.totalLessons || 0}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span>Students enrolled</span>
@@ -534,10 +591,19 @@ export default function UploadContent() {
               <Button 
                 className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold"
                 onClick={handleSaveModule}
-                disabled={!selectedCourse || !currentModule.title.trim() || uploadedFiles.length === 0}
+                disabled={!selectedCourse || !currentModule.title.trim() || uploadedFiles.length === 0 || isUploading}
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Add Module to Course
+                {isUploading ? (
+                  <>
+                    <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Adding Module...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Module to Course
+                  </>
+                )}
               </Button>
               <Button 
                 variant="outline" 

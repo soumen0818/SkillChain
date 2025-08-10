@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "server": "nodemon index.js"
+    "server": "nodemon index.js",
+    "setup": "node setup-cloudinary.js",
+    "check-config": "node setup-cloudinary.js"
   },
   "author": "",
   "license": "ISC",

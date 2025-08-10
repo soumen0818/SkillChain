@@ -2,12 +2,40 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
+// Validate Cloudinary configuration
+const validateCloudinaryConfig = () => {
+    const { CLOUDINARY_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
+    
+    if (!CLOUDINARY_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+        console.error('❌ Cloudinary configuration missing!');
+        console.error('Please set CLOUDINARY_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file');
+        console.error('Get your credentials from: https://cloudinary.com/console');
+        return false;
+    }
+    
+    if (CLOUDINARY_NAME === 'your_cloudinary_cloud_name' || 
+        CLOUDINARY_API_KEY === 'your_cloudinary_api_key' || 
+        CLOUDINARY_API_SECRET === 'your_cloudinary_api_secret') {
+        console.error('❌ Cloudinary placeholder values detected!');
+        console.error('Please replace the placeholder values in your .env file with actual Cloudinary credentials');
+        return false;
+    }
+    
+    console.log('✅ Cloudinary configuration validated');
+    return true;
+};
+
 // Configure Cloudinary
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Validate configuration on startup
+if (!validateCloudinaryConfig()) {
+    console.log('Run "npm run setup" in the server directory for help with Cloudinary configuration');
+}
 
 // Storage configuration for course thumbnails
 const thumbnailStorage = new CloudinaryStorage({

@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
 const certificateRoutes = require('./routes/certificates');
 const uploadRoutes = require('./routes/upload');
+const discussionRoutes = require('./routes/discussions');
 
 dotenv.config();
 connectDB();
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/discussions', discussionRoutes);
 
 
 const PORT = process.env.PORT || 5000;

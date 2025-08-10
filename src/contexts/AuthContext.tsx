@@ -31,7 +31,7 @@ export const useAuth = () => {
   return context;
 };
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = 'http://localhost:5001/api/auth';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

@@ -74,6 +74,18 @@ const CourseSchema = new mongoose.Schema({
       },
       content: String,
       description: String,
+      videoUrl: String,
+      documentUrl: String,
+      duration: String,
+      order: Number,
+      isCompleted: {
+        type: Boolean,
+        default: false
+      },
+      isLocked: {
+        type: Boolean,
+        default: false
+      }
     }]
   }],
   students: [{
