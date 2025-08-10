@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { Card } from '@/components/ui/card';
@@ -34,7 +35,8 @@ import {
   AlertCircle,
   Star,
   Target,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 interface Transaction {
@@ -59,12 +61,304 @@ interface WalletStats {
   studentsServed?: number;
 }
 
+interface PurchaseData {
+  certificateId: string;
+  title: string;
+  price: string;
+  currency: 'ETH' | 'ST';
+  seller: string;
+}
+
+// Purchase Interface Component
+function PurchaseInterface({ purchaseData, walletStats }: { purchaseData: PurchaseData; walletStats: WalletStats }) {
+  const [paymentMethod, setPaymentMethod] = useState<'ETH' | 'ST'>(purchaseData.currency);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  const handlePurchase = async () => {
+    if (!agreedToTerms) {
+      toast({
+        title: "Terms Required",
+        description: "Please agree to the terms and conditions",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const price = parseFloat(purchaseData.price);
+    const hasEnoughBalance = paymentMethod === 'ETH' ? 
+      walletStats.ethBalance >= price : 
+      walletStats.skillTokens >= price;
+
+    if (!hasEnoughBalance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You don't have enough ${paymentMethod} to complete this purchase`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // Simulate transaction processing
+    setTimeout(() => {
+      toast({
+        title: "🎉 Purchase Successful!",
+        description: `You've successfully purchased "${purchaseData.title}" for ${purchaseData.price} ${paymentMethod}`,
+      });
+      setIsProcessing(false);
+    }, 3000);
+  };
+
+  const estimatedGasFee = 0.002; // ETH
+  const platformFee = parseFloat(purchaseData.price) * 0.025; // 2.5%
+  const totalCost = parseFloat(purchaseData.price) + (paymentMethod === 'ETH' ? estimatedGasFee : 0);
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-8">
+      {/* Purchase Details */}
+      <Card className="p-6 border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+              <Award className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">Certificate Purchase</h3>
+              <p className="text-muted-foreground">Secure blockchain transaction</p>
+            </div>
+          </div>
+
+          {/* Certificate Info */}
+          <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+            <h4 className="font-semibold text-lg mb-2">{purchaseData.title}</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Seller:</span>
+                <span className="font-medium">{purchaseData.seller}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Certificate ID:</span>
+                <code className="text-xs bg-muted px-2 py-1 rounded">{purchaseData.certificateId}</code>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Listed Price:</span>
+                <span className="font-bold text-lg text-primary">{purchaseData.price} {purchaseData.currency}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div className="space-y-4">
+            <h4 className="font-semibold">Payment Method</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant={paymentMethod === 'ETH' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('ETH')}
+                className="h-auto p-4 flex flex-col items-center space-y-2 hover:scale-105 transform transition-all duration-300"
+              >
+                <Coins className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-medium">Ethereum</div>
+                  <div className="text-xs text-muted-foreground">Balance: {walletStats.ethBalance.toFixed(4)} ETH</div>
+                </div>
+              </Button>
+              <Button
+                variant={paymentMethod === 'ST' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('ST')}
+                className="h-auto p-4 flex flex-col items-center space-y-2 hover:scale-105 transform transition-all duration-300"
+              >
+                <Star className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-medium">SkillTokens</div>
+                  <div className="text-xs text-muted-foreground">Balance: {walletStats.skillTokens.toLocaleString()} ST</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+
+          {/* Transaction Breakdown */}
+          <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
+            <h5 className="font-medium">Transaction Breakdown</h5>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Certificate Price:</span>
+                <span>{purchaseData.price} {paymentMethod}</span>
+              </div>
+              {paymentMethod === 'ETH' && (
+                <div className="flex justify-between">
+                  <span>Estimated Gas Fee:</span>
+                  <span>{estimatedGasFee.toFixed(4)} ETH</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Platform Fee (2.5%):</span>
+                <span>Included in price</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>Total Cost:</span>
+                <span>{totalCost.toFixed(4)} {paymentMethod}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Terms Agreement */}
+          <div className="flex items-start space-x-3">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-1"
+            />
+            <Label htmlFor="terms" className="text-sm leading-relaxed">
+              I agree to the <Button variant="link" className="h-auto p-0 text-primary">terms and conditions</Button> and 
+              understand that this transaction is final and cannot be reversed.
+            </Label>
+          </div>
+        </div>
+      </Card>
+
+      {/* Payment Processing */}
+      <Card className="p-6 border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-2xl hover:shadow-3xl transition-all duration-500">
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">Payment Confirmation</h3>
+              <p className="text-muted-foreground">Review and confirm your purchase</p>
+            </div>
+          </div>
+
+          {/* Balance Check */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div>
+                <p className="font-medium">Current Balance</p>
+                <p className="text-sm text-muted-foreground">
+                  {paymentMethod === 'ETH' ? `${walletStats.ethBalance.toFixed(4)} ETH` : `${walletStats.skillTokens.toLocaleString()} ST`}
+                </p>
+              </div>
+              <div className={`text-right ${(paymentMethod === 'ETH' ? walletStats.ethBalance : walletStats.skillTokens) >= parseFloat(purchaseData.price) ? 'text-green-600' : 'text-red-600'}`}>
+                <CheckCircle className="w-6 h-6 mx-auto mb-1" />
+                <p className="text-xs font-medium">
+                  {(paymentMethod === 'ETH' ? walletStats.ethBalance : walletStats.skillTokens) >= parseFloat(purchaseData.price) ? 'Sufficient' : 'Insufficient'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div>
+                <p className="font-medium">After Purchase</p>
+                <p className="text-sm text-muted-foreground">Remaining balance</p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold">
+                  {paymentMethod === 'ETH' 
+                    ? `${Math.max(0, walletStats.ethBalance - totalCost).toFixed(4)} ETH`
+                    : `${Math.max(0, walletStats.skillTokens - parseFloat(purchaseData.price)).toLocaleString()} ST`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Security Features */}
+          <div className="space-y-3">
+            <h5 className="font-medium">Security Features</h5>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-sm">
+                <Shield className="w-4 h-4 text-green-600" />
+                <span>End-to-end encryption</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>Blockchain verified</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm">
+                <Star className="w-4 h-4 text-green-600" />
+                <span>Smart contract protected</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Purchase Button */}
+          <Button
+            className="w-full gradient-primary hover:shadow-xl hover:shadow-primary/30 hover:scale-105 transform transition-all duration-300 hover:-translate-y-1 text-lg py-6"
+            onClick={handlePurchase}
+            disabled={isProcessing || !agreedToTerms}
+          >
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                Processing Transaction...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Complete Purchase - {totalCost.toFixed(4)} {paymentMethod}
+              </>
+            )}
+          </Button>
+
+          {/* Processing Status */}
+          {isProcessing && (
+            <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Transaction Processing</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span>Verifying payment...</span>
+                  <span className="text-blue-600">30%</span>
+                </div>
+                <Progress value={30} className="h-2" />
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Please do not close this window. The transaction typically takes 1-3 minutes to complete.
+              </p>
+            </div>
+          )}
+
+          {/* Support Link */}
+          <div className="text-center">
+            <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
+              Need help? Contact support
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function WalletPage() {
   const { user } = useAuth();
   const { listings } = useMarketplace();
+  const location = useLocation();
   const [isConnecting, setIsConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState(user?.walletAddress || '');
   const [activeTab, setActiveTab] = useState('overview');
+  const [purchaseData, setPurchaseData] = useState<any>(null);
+
+  // Check if we have purchase data from navigation
+  useEffect(() => {
+    if (location.state?.purchaseData) {
+      setPurchaseData(location.state.purchaseData);
+      setActiveTab('purchase'); // Switch to purchase tab if purchase data exists
+      
+      // Show purchase notification
+      toast({
+        title: "Ready to Purchase",
+        description: `Proceed with purchasing "${location.state.purchaseData.title}" for ${location.state.purchaseData.price} ${location.state.purchaseData.currency}`,
+      });
+    }
+  }, [location.state]);
 
   // Mock wallet data - in real app, fetch from blockchain/backend
   const [walletStats, setWalletStats] = useState<WalletStats>({
@@ -486,9 +780,15 @@ export default function WalletPage() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-md mb-8">
+          <TabsList className={`grid w-full ${purchaseData ? 'grid-cols-4' : 'grid-cols-3'} bg-white/60 backdrop-blur-md mb-8`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            {purchaseData && (
+              <TabsTrigger value="purchase" className="text-primary font-semibold">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Purchase
+              </TabsTrigger>
+            )}
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -546,6 +846,13 @@ export default function WalletPage() {
               </div>
             </Card>
           </TabsContent>
+
+          {/* Purchase Tab - only shown when purchase data exists */}
+          {purchaseData && (
+            <TabsContent value="purchase" className="space-y-6">
+              <PurchaseInterface purchaseData={purchaseData} walletStats={walletStats} />
+            </TabsContent>
+          )}
 
           <TabsContent value="settings" className="space-y-6">
             <Card className="p-6 border-0 bg-white/70 backdrop-blur-md shadow-elevation">

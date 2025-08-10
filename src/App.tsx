@@ -35,6 +35,7 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
 import CertificateMarketplaceListing from "./pages/CertificateMarketplaceListing";
+import CertificateDetails from "./pages/CertificateDetails";
 import Footer from "@/components/Footer";
 import SettingsPage from "./pages/Settings";
 import WalletPage from "./pages/Wallet";
@@ -256,6 +257,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student', 'teacher']}>
                   <CertificateVerification />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/certificate-details/:id" 
+              element={
+                <ProtectedRoute allowedRoles={['student', 'teacher']}>
+                  <CertificateDetails />
                 </ProtectedRoute>
               } 
             />
