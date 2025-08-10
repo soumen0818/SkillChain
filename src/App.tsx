@@ -18,7 +18,7 @@ import UploadContent from "./pages/UploadContent";
 import IssueCertificate from "./pages/IssueCertificate";
 import TeacherAnalytics from "./pages/TeacherAnalytics";
 import MyLearningJourney from "./pages/MyLearningJourney";
-import CourseStudy from "./pages/CourseStudy";
+import CourseStudy from "./pages/CourseStudyReal";
 import BrowseCourses from "./pages/BrowseCourses";
 import CourseProgress from "./pages/CourseProgress";
 import GetCertificate from "./pages/GetCertificate";
