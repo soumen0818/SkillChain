@@ -11,9 +11,9 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourses } from '@/contexts/CourseContext';
+import { courseAPI, certificateAPI } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import {
   Award,
   User,
   BookOpen,
@@ -40,7 +40,8 @@ import {
   Trophy,
   Gem,
   Plus,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 
 interface Student {
@@ -48,48 +49,57 @@ interface Student {
   name: string;
   email: string;
   walletAddress: string;
-  coursesCompleted: string[];
-  courseProgress: { [courseId: string]: StudentProgress };
   joinDate: string;
-  avatar?: string;
-}
-
-interface StudentProgress {
-  courseId: string;
   progress: number;
   grade: number;
-  completedModules: number;
-  totalModules: number;
-  quizScores: number[];
-  assignmentScores: number[];
-  timeSpent: string;
-  lastActivity: string;
   certificateIssued: boolean;
   certificateId?: string;
+  certificateType?: 'completion' | 'excellence' | 'mastery';
+  issueDate?: string;
 }
 
 interface Certificate {
-  id: string;
-  studentId: string;
-  courseId: string;
+  _id: string;
   studentName: string;
+  studentEmail: string;
   courseName: string;
-  issueDate: string;
+  courseCategory: string;
+  certificateType: 'completion' | 'excellence' | 'mastery';
   grade: number;
   completionTime: string;
+  skillTokensAwarded: number;
+  customMessage: string;
   walletAddress: string;
+  tokenId: string;
+  transactionHash: string;
   nftTokenId: string;
   blockchainTxHash: string;
-  skillTokensAwarded: number;
-  certificateType: 'completion' | 'excellence' | 'mastery';
+  issueDate: string;
+  course: {
+    _id: string;
+    title: string;
+    category: string;
+  };
+  student: {
+    _id: string;
+    username: string;
+    email: string;
+    name: string;
+  };
+}
+
+interface Course {
+  _id: string;
+  title: string;
+  category: string;
 }
 
 export default function IssueCertificate() {
   const { user } = useAuth();
-  const { getTeacherCourses, getCourseById } = useCourses();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
@@ -100,115 +110,91 @@ export default function IssueCertificate() {
   const [activeTab, setActiveTab] = useState('issue');
   const [issuedCertificates, setIssuedCertificates] = useState<Certificate[]>([]);
   const [isIssuing, setIsIssuing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
-  // Get teacher's courses
-  const courses = user?._id ? getTeacherCourses(user._id) : [];
-
-  // Mock student data - in real app, this would come from your backend
-  const mockStudents: Student[] = [
-    {
-      id: 'student1',
-      name: 'Alice Johnson',
-      email: 'alice@example.com',
-      walletAddress: '0x1234...5678',
-      coursesCompleted: ['1', '2'],
-      courseProgress: {
-        '1': {
-          courseId: '1',
-          progress: 100,
-          grade: 95,
-          completedModules: 8,
-          totalModules: 8,
-          quizScores: [92, 96, 88, 94],
-          assignmentScores: [90, 98, 85],
-          timeSpent: '24 hours',
-          lastActivity: '2 days ago',
-          certificateIssued: false
-        },
-        '2': {
-          courseId: '2',
-          progress: 85,
-          grade: 88,
-          completedModules: 10,
-          totalModules: 12,
-          quizScores: [85, 90, 88],
-          assignmentScores: [87, 89],
-          timeSpent: '32 hours',
-          lastActivity: '1 day ago',
-          certificateIssued: false
-        }
-      },
-      joinDate: '2024-01-15',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b5aa?w=100&h=100&fit=crop&crop=face'
-    },
-    {
-      id: 'student2',
-      name: 'Bob Smith',
-      email: 'bob@example.com',
-      walletAddress: '0x9876...4321',
-      coursesCompleted: ['1'],
-      courseProgress: {
-        '1': {
-          courseId: '1',
-          progress: 100,
-          grade: 92,
-          completedModules: 8,
-          totalModules: 8,
-          quizScores: [88, 94, 90, 96],
-          assignmentScores: [85, 92, 90],
-          timeSpent: '28 hours',
-          lastActivity: '1 week ago',
-          certificateIssued: true,
-          certificateId: 'cert_001'
-        }
-      },
-      joinDate: '2024-02-01',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-    },
-    {
-      id: 'student3',
-      name: 'Carol Davis',
-      email: 'carol@example.com',
-      walletAddress: '0x5555...7777',
-      coursesCompleted: [],
-      courseProgress: {
-        '1': {
-          courseId: '1',
-          progress: 100,
-          grade: 98,
-          completedModules: 8,
-          totalModules: 8,
-          quizScores: [96, 98, 95, 100],
-          assignmentScores: [95, 100, 98],
-          timeSpent: '22 hours',
-          lastActivity: '3 days ago',
-          certificateIssued: false
-        }
-      },
-      joinDate: '2024-01-20'
-    }
-  ];
-
+  // Load teacher's courses on component mount
   useEffect(() => {
-    setStudents(mockStudents);
-    // Load issued certificates from localStorage or your backend
-    const savedCertificates = localStorage.getItem('issuedCertificates');
-    if (savedCertificates) {
-      setIssuedCertificates(JSON.parse(savedCertificates));
-    }
-  }, []);
+    const loadTeacherCourses = async () => {
+      try {
+        setIsLoading(true);
+        const teacherCourses = await courseAPI.getTeacherCourses();
+        setCourses(teacherCourses);
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your courses',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    if (user?.role === 'teacher') {
+      loadTeacherCourses();
+    }
+  }, [user]);
+
+  // Load issued certificates
+  useEffect(() => {
+    const loadIssuedCertificates = async () => {
+      try {
+        const certificates = await certificateAPI.getTeacherCertificates();
+        setIssuedCertificates(certificates);
+      } catch (error) {
+        console.error('Error loading certificates:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load issued certificates',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    if (user?.role === 'teacher') {
+      loadIssuedCertificates();
+    }
+  }, [user]);
+
+  // Load students when course is selected
+  useEffect(() => {
+    const loadCourseStudents = async () => {
+      if (!selectedCourse) {
+        setStudents([]);
+        return;
+      }
+
+      try {
+        setLoadingStudents(true);
+        const response = await certificateAPI.getCourseStudents(selectedCourse);
+        setStudents(response.students || []);
+      } catch (error) {
+        console.error('Error loading course students:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load course students',
+          variant: 'destructive',
+        });
+        setStudents([]);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+
+    loadCourseStudents();
+  }, [selectedCourse]);
+
+  // Filter eligible students
   const getEligibleStudents = () => {
     if (!selectedCourse) return [];
-    
+
     return students.filter(student => {
-      const progress = student.courseProgress[selectedCourse];
-      if (!progress) return false;
-      
-      const meetsFilter = filterBy === 'all' || 
-        (filterBy === 'completed' && progress.progress === 100) ||
-        (filterBy === 'pending' && progress.progress === 100 && !progress.certificateIssued) ||
-        (filterBy === 'issued' && progress.certificateIssued);
+      const meetsFilter = filterBy === 'all' ||
+        (filterBy === 'completed' && student.progress === 100) ||
+        (filterBy === 'pending' && student.progress === 100 && !student.certificateIssued) ||
+        (filterBy === 'issued' && student.certificateIssued);
 
       const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -266,59 +252,51 @@ export default function IssueCertificate() {
     }
 
     const student = students.find(s => s.id === selectedStudent);
-    const course = getCourseById(selectedCourse);
-    const progress = student?.courseProgress[selectedCourse];
+    if (!student) {
+      toast({
+        title: "Error",
+        description: "Selected student not found.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    if (!student || !course || !progress) return;
+    if (student.certificateIssued) {
+      toast({
+        title: "Error",
+        description: "Certificate has already been issued for this student.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsIssuing(true);
 
     try {
-      // Simulate blockchain transaction
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      const newCertificate: Certificate = {
-        id: `cert_${Date.now()}`,
-        studentId: selectedStudent,
+      const certificateData = {
         courseId: selectedCourse,
-        studentName: student.name,
-        courseName: course.title,
-        issueDate: new Date().toISOString().split('T')[0],
-        grade: progress.grade,
-        completionTime: progress.timeSpent,
-        walletAddress: student.walletAddress,
-        nftTokenId: `NFT_${Math.random().toString(36).substr(2, 9)}`,
-        blockchainTxHash: `0x${Math.random().toString(36).substr(2, 16)}...`,
-        skillTokensAwarded: getCertificateTypeInfo(certificateType, progress.grade).skillTokens,
-        certificateType
+        studentId: selectedStudent,
+        certificateType,
+        grade: student.grade,
+        completionTime: `${Math.floor(Math.random() * 20) + 10} hours`, // Can be calculated from real data
+        customMessage,
+        skillTokensAwarded: getCertificateTypeInfo(certificateType, student.grade).skillTokens
       };
 
-      const updatedCertificates = [...issuedCertificates, newCertificate];
-      setIssuedCertificates(updatedCertificates);
-      localStorage.setItem('issuedCertificates', JSON.stringify(updatedCertificates));
-
-      // Update student progress
-      const updatedStudents = students.map(s => 
-        s.id === selectedStudent 
-          ? {
-              ...s,
-              courseProgress: {
-                ...s.courseProgress,
-                [selectedCourse]: {
-                  ...s.courseProgress[selectedCourse],
-                  certificateIssued: true,
-                  certificateId: newCertificate.id
-                }
-              }
-            }
-          : s
-      );
-      setStudents(updatedStudents);
+      const response = await certificateAPI.issueCertificate(certificateData);
 
       toast({
         title: "Certificate Issued Successfully! 🎉",
-        description: `NFT certificate sent to ${student.name}'s wallet.`,
+        description: `NFT certificate issued to ${student.name}.`,
       });
+
+      // Refresh the student list to show updated certificate status
+      const updatedResponse = await certificateAPI.getCourseStudents(selectedCourse);
+      setStudents(updatedResponse.students || []);
+
+      // Refresh issued certificates list
+      const certificates = await certificateAPI.getTeacherCertificates();
+      setIssuedCertificates(certificates);
 
       // Reset form
       setSelectedStudent('');
@@ -326,10 +304,11 @@ export default function IssueCertificate() {
       setCustomMessage('');
       setActiveTab('history');
 
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error issuing certificate:', error);
       toast({
         title: "Error",
-        description: "Failed to issue certificate. Please try again.",
+        description: error.message || "Failed to issue certificate. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -338,19 +317,15 @@ export default function IssueCertificate() {
   };
 
   const selectedStudentData = selectedStudent ? students.find(s => s.id === selectedStudent) : null;
-  const selectedStudentProgress = selectedStudentData && selectedCourse 
-    ? selectedStudentData.courseProgress[selectedCourse] 
-    : null;
-
-  const selectedCourseData = selectedCourse ? getCourseById(selectedCourse) : null;
+  const selectedCourseData = selectedCourse ? courses.find(c => c._id === selectedCourse) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/teacher-dashboard')}
             className="mb-4"
           >
@@ -394,23 +369,32 @@ export default function IssueCertificate() {
                       <SelectValue placeholder="Choose a course to issue certificates for" />
                     </SelectTrigger>
                     <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          <div className="flex items-center space-x-3">
-                            <img 
-                              src={course.thumbnail} 
-                              alt={course.title}
-                              className="w-8 h-8 rounded object-cover"
-                            />
-                            <div>
-                              <p className="font-medium">{course.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {course.students} students enrolled
-                              </p>
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-2">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          <span>Loading courses...</span>
+                        </div>
+                      ) : courses.length === 0 ? (
+                        <div className="py-2 text-center text-muted-foreground">
+                          No courses found
+                        </div>
+                      ) : (
+                        courses.map((course) => (
+                          <SelectItem key={course._id} value={course._id}>
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-indigo-400 rounded flex items-center justify-center text-white text-xs font-semibold">
+                                {course.title.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-medium">{course.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {course.category || 'General'}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </Card>
@@ -448,83 +432,80 @@ export default function IssueCertificate() {
                     </div>
 
                     <div className="grid gap-4 max-h-96 overflow-y-auto">
-                      {getEligibleStudents().map((student) => {
-                        const progress = student.courseProgress[selectedCourse];
-                        const isSelected = selectedStudent === student.id;
-                        
-                        return (
-                          <div
-                            key={student.id}
-                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                              isSelected 
-                                ? 'border-purple-500 bg-purple-50' 
-                                : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
-                            }`}
-                            onClick={() => setSelectedStudent(student.id)}
-                          >
-                            <div className="flex items-center space-x-4">
-                              <div className="relative">
-                                {student.avatar ? (
-                                  <img 
-                                    src={student.avatar} 
-                                    alt={student.name}
-                                    className="w-12 h-12 rounded-full object-cover"
-                                  />
-                                ) : (
+                      {loadingStudents ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                          <span>Loading students...</span>
+                        </div>
+                      ) : getEligibleStudents().length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          {selectedCourse ? 'No students found for the selected filters.' : 'Please select a course first.'}
+                        </div>
+                      ) : (
+                        getEligibleStudents().map((student) => {
+                          const isSelected = selectedStudent === student.id;
+
+                          return (
+                            <div
+                              key={student.id}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all ${isSelected
+                                  ? 'border-purple-500 bg-purple-50'
+                                  : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                                }`}
+                              onClick={() => setSelectedStudent(student.id)}
+                            >
+                              <div className="flex items-center space-x-4">
+                                <div className="relative">
                                   <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold">
                                     {student.name.charAt(0)}
                                   </div>
-                                )}
-                                {progress?.certificateIssued && (
-                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-3 h-3 text-white" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-semibold">{student.name}</h4>
-                                  <div className="flex items-center space-x-2">
-                                    <Badge 
-                                      variant={progress?.progress === 100 ? 'default' : 'secondary'}
-                                      className={
-                                        progress?.progress === 100 
-                                          ? 'bg-green-500 hover:bg-green-600' 
-                                          : 'bg-yellow-500 hover:bg-yellow-600'
-                                      }
-                                    >
-                                      {progress?.progress}% Complete
-                                    </Badge>
-                                    {progress?.certificateIssued && (
-                                      <Badge className="bg-blue-500 hover:bg-blue-600">
-                                        Certified
+                                  {student.certificateIssued && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                      <CheckCircle className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold">{student.name}</h4>
+                                    <div className="flex items-center space-x-2">
+                                      <Badge
+                                        variant={student.progress === 100 ? 'default' : 'secondary'}
+                                        className={student.progress === 100 ? 'bg-green-500' : ''}
+                                      >
+                                        {student.progress}% Complete
                                       </Badge>
-                                    )}
+                                      {student.certificateIssued && (
+                                        <Badge className="bg-blue-500 hover:bg-blue-600">
+                                          Certified
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
+                                  <p className="text-sm text-muted-foreground mb-2">{student.email}</p>
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                      <Star className="w-4 h-4 text-yellow-500" />
+                                      <span>Grade: {student.grade}%</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Clock className="w-4 h-4 text-muted-foreground" />
+                                      <span>Joined: {new Date(student.joinDate).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                  <Progress value={student.progress || 0} className="h-2 mt-2" />
                                 </div>
-                                <p className="text-sm text-muted-foreground mb-2">{student.email}</p>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div className="flex items-center space-x-2">
-                                    <Star className="w-4 h-4 text-yellow-500" />
-                                    <span>Grade: {progress?.grade}%</span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Clock className="w-4 h-4 text-muted-foreground" />
-                                    <span>Time: {progress?.timeSpent}</span>
-                                  </div>
-                                </div>
-                                <Progress value={progress?.progress || 0} className="h-2 mt-2" />
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </Card>
                 )}
 
                 {/* Certificate Configuration */}
-                {selectedStudent && selectedStudentProgress && (
+                {selectedStudent && selectedStudentData && (
                   <Card className="p-6 shadow-lg border-0">
                     <h3 className="text-xl font-semibold mb-6 flex items-center">
                       <Award className="w-5 h-5 mr-2 text-purple-600" />
@@ -537,17 +518,16 @@ export default function IssueCertificate() {
                         <Label className="text-base font-semibold">Certificate Type</Label>
                         <div className="grid gap-4">
                           {['completion', 'excellence', 'mastery'].map((type) => {
-                            const info = getCertificateTypeInfo(type, selectedStudentProgress.grade);
+                            const info = getCertificateTypeInfo(type, selectedStudentData.grade);
                             const IconComponent = info.icon;
-                            
+
                             return (
                               <div
                                 key={type}
-                                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                                  certificateType === type
+                                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${certificateType === type
                                     ? `${info.borderColor} ${info.bgColor}`
                                     : 'border-gray-200 hover:border-gray-300'
-                                } ${!info.requirement ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  } ${!info.requirement ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 onClick={() => info.requirement && setCertificateType(type as any)}
                               >
                                 <div className="flex items-center space-x-4">
@@ -607,32 +587,22 @@ export default function IssueCertificate() {
                     <h4 className="font-semibold mb-4">Course Information</h4>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
-                        <img 
-                          src={selectedCourseData.thumbnail} 
-                          alt={selectedCourseData.title}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-lg flex items-center justify-center text-white font-semibold">
+                          {selectedCourseData.title.charAt(0)}
+                        </div>
                         <div>
                           <h5 className="font-medium">{selectedCourseData.title}</h5>
-                          <p className="text-sm text-muted-foreground">{selectedCourseData.category}</p>
+                          <p className="text-sm text-muted-foreground">{selectedCourseData.category || 'General'}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Students</span>
-                          <p className="font-medium">{selectedCourseData.students}</p>
+                          <p className="font-medium">{students.length}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Modules</span>
-                          <p className="font-medium">{selectedCourseData.modules}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Duration</span>
-                          <p className="font-medium">{selectedCourseData.duration}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Level</span>
-                          <p className="font-medium">{selectedCourseData.level}</p>
+                          <span className="text-muted-foreground">Certificates</span>
+                          <p className="font-medium">{students.filter(s => s.certificateIssued).length}</p>
                         </div>
                       </div>
                     </div>
@@ -640,41 +610,43 @@ export default function IssueCertificate() {
                 )}
 
                 {/* Student Performance */}
-                {selectedStudentData && selectedStudentProgress && (
+                {selectedStudentData && (
                   <Card className="p-6 shadow-lg border-0">
                     <h4 className="font-semibold mb-4">Student Performance</h4>
                     <div className="space-y-4">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-600 mb-1">
-                          {selectedStudentProgress.grade}%
+                          {selectedStudentData.grade}%
                         </div>
                         <p className="text-sm text-muted-foreground">Overall Grade</p>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span>Progress</span>
-                          <span className="font-medium">{selectedStudentProgress.progress}%</span>
+                          <span className="font-medium">{selectedStudentData.progress}%</span>
                         </div>
-                        <Progress value={selectedStudentProgress.progress} className="h-2" />
-                        
+                        <Progress value={selectedStudentData.progress} className="h-2" />
+
                         <div className="flex justify-between text-sm">
-                          <span>Modules Completed</span>
+                          <span>Status</span>
                           <span className="font-medium">
-                            {selectedStudentProgress.completedModules}/{selectedStudentProgress.totalModules}
+                            {selectedStudentData.certificateIssued ? 'Certified' : 'Eligible for Certificate'}
                           </span>
                         </div>
-                        
+
                         <div className="flex justify-between text-sm">
-                          <span>Quiz Average</span>
+                          <span>Joined</span>
                           <span className="font-medium">
-                            {Math.round(selectedStudentProgress.quizScores.reduce((a, b) => a + b, 0) / selectedStudentProgress.quizScores.length)}%
+                            {new Date(selectedStudentData.joinDate).toLocaleDateString()}
                           </span>
                         </div>
-                        
+
                         <div className="flex justify-between text-sm">
-                          <span>Time Spent</span>
-                          <span className="font-medium">{selectedStudentProgress.timeSpent}</span>
+                          <span>Wallet</span>
+                          <span className="font-medium text-xs">
+                            {selectedStudentData.walletAddress || 'Not connected'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -696,9 +668,9 @@ export default function IssueCertificate() {
                     <div className="flex justify-between">
                       <span className="text-purple-700">Pending</span>
                       <span className="font-semibold text-purple-900">
-                        {getEligibleStudents().filter(s => 
-                          s.courseProgress[selectedCourse]?.progress === 100 && 
-                          !s.courseProgress[selectedCourse]?.certificateIssued
+                        {getEligibleStudents().filter(s =>
+                          s.progress === 100 &&
+                          !s.certificateIssued
                         ).length}
                       </span>
                     </div>
@@ -706,10 +678,10 @@ export default function IssueCertificate() {
                 </Card>
 
                 {/* Issue Button */}
-                <Button 
+                <Button
                   className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold"
                   onClick={handleIssueCertificate}
-                  disabled={!selectedStudent || !selectedStudentProgress || isIssuing}
+                  disabled={!selectedStudent || !selectedStudentData || isIssuing}
                 >
                   {isIssuing ? (
                     <>
@@ -744,7 +716,7 @@ export default function IssueCertificate() {
 
             <div className="grid gap-4">
               {issuedCertificates.map((certificate) => (
-                <Card key={certificate.id} className="p-6 hover:shadow-lg transition-all duration-300">
+                <Card key={certificate._id} className="p-6 hover:shadow-lg transition-all duration-300">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center">
@@ -756,18 +728,17 @@ export default function IssueCertificate() {
                         <div className="flex items-center space-x-4 mt-1 text-xs text-muted-foreground">
                           <span>Grade: {certificate.grade}%</span>
                           <span>•</span>
-                          <span>{certificate.issueDate}</span>
+                          <span>{new Date(certificate.issueDate).toLocaleDateString()}</span>
                           <span>•</span>
-                          <span>NFT #{certificate.nftTokenId}</span>
+                          <span>NFT #{certificate.tokenId}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge className={`capitalize ${
-                        certificate.certificateType === 'mastery' ? 'bg-purple-500 hover:bg-purple-600' :
-                        certificate.certificateType === 'excellence' ? 'bg-yellow-500 hover:bg-yellow-600' :
-                        'bg-blue-500 hover:bg-blue-600'
-                      }`}>
+                      <Badge className={`capitalize ${certificate.certificateType === 'mastery' ? 'bg-purple-500 hover:bg-purple-600' :
+                          certificate.certificateType === 'excellence' ? 'bg-yellow-500 hover:bg-yellow-600' :
+                            'bg-blue-500 hover:bg-blue-600'
+                        }`}>
                         {certificate.certificateType}
                       </Badge>
                       <Button size="sm" variant="outline">
@@ -804,38 +775,37 @@ export default function IssueCertificate() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { 
-                  name: 'Blockchain Fundamentals', 
-                  type: 'completion', 
+                {
+                  name: 'Blockchain Fundamentals',
+                  type: 'completion',
                   color: 'blue',
                   preview: 'https://images.unsplash.com/photo-1589902494062-2c33c8b3f797?w=300&h=200&fit=crop'
                 },
-                { 
-                  name: 'Excellence Certificate', 
-                  type: 'excellence', 
+                {
+                  name: 'Excellence Certificate',
+                  type: 'excellence',
                   color: 'yellow',
                   preview: 'https://images.unsplash.com/photo-1606787517778-3cf06d5fa107?w=300&h=200&fit=crop'
                 },
-                { 
-                  name: 'Mastery Certificate', 
-                  type: 'mastery', 
+                {
+                  name: 'Mastery Certificate',
+                  type: 'mastery',
                   color: 'purple',
                   preview: 'https://images.unsplash.com/photo-1604719334677-9c0f2b6b4b7e?w=300&h=200&fit=crop'
                 }
               ].map((template, index) => (
                 <Card key={index} className="overflow-hidden hover:shadow-lg transition-all duration-300">
                   <div className="relative">
-                    <img 
-                      src={template.preview} 
+                    <img
+                      src={template.preview}
                       alt={template.name}
                       className="w-full h-40 object-cover"
                     />
                     <div className="absolute top-3 right-3">
-                      <Badge className={`${
-                        template.color === 'purple' ? 'bg-purple-500 hover:bg-purple-600' :
-                        template.color === 'yellow' ? 'bg-yellow-500 hover:bg-yellow-600' :
-                        'bg-blue-500 hover:bg-blue-600'
-                      }`}>
+                      <Badge className={`${template.color === 'purple' ? 'bg-purple-500 hover:bg-purple-600' :
+                          template.color === 'yellow' ? 'bg-yellow-500 hover:bg-yellow-600' :
+                            'bg-blue-500 hover:bg-blue-600'
+                        }`}>
                         {template.type}
                       </Badge>
                     </div>

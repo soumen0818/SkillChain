@@ -534,11 +534,11 @@ export default function CourseStudy() {
         <div className="mb-8">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/my-courses')}
+            onClick={() => navigate('/my-learning-journey')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to My Courses
+            Back to My Learning Journey
           </Button>
           
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl p-8">

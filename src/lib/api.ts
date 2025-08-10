@@ -225,3 +225,84 @@ export const authAPI = {
         return response.json();
     },
 };
+
+// Certificate API functions
+export const certificateAPI = {
+    // Get students for a specific course (for teachers)
+    getCourseStudents: async (courseId: string) => {
+        const response = await fetch(`${API_BASE_URL}/certificates/course/${courseId}/students`, {
+            headers: createHeaders(),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch course students');
+        }
+
+        return response.json();
+    },
+
+    // Issue certificate to a student
+    issueCertificate: async (certificateData: {
+        courseId: string;
+        studentId: string;
+        certificateType?: 'completion' | 'excellence' | 'mastery';
+        grade?: number;
+        completionTime?: string;
+        customMessage?: string;
+        skillTokensAwarded?: number;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/certificates`, {
+            method: 'POST',
+            headers: createHeaders(),
+            body: JSON.stringify(certificateData),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to issue certificate');
+        }
+
+        return response.json();
+    },
+
+    // Get certificates for the current student
+    getStudentCertificates: async () => {
+        const response = await fetch(`${API_BASE_URL}/certificates/my-certificates`, {
+            headers: createHeaders(),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch certificates');
+        }
+
+        return response.json();
+    },
+
+    // Get certificates issued by the current teacher
+    getTeacherCertificates: async () => {
+        const response = await fetch(`${API_BASE_URL}/certificates/teacher-certificates`, {
+            headers: createHeaders(),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch teacher certificates');
+        }
+
+        return response.json();
+    },
+
+    // Get certificate by ID (for verification)
+    getCertificateById: async (certificateId: string) => {
+        const response = await fetch(`${API_BASE_URL}/certificates/${certificateId}`);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch certificate');
+        }
+
+        return response.json();
+    },
+};

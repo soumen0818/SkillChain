@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { useCourses } from '@/contexts/CourseContext';
+import { certificateAPI } from '@/lib/api';
 import {
   BookOpen,
   Trophy,
@@ -24,9 +25,42 @@ import {
   Plus,
   Eye,
   Settings,
-  Share2
+  Share2,
+  Loader2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface StudentCertificate {
+  _id: string;
+  studentName: string;
+  studentEmail: string;
+  courseName: string;
+  courseCategory: string;
+  certificateType: 'completion' | 'excellence' | 'mastery';
+  grade: number;
+  completionTime: string;
+  skillTokensAwarded: number;
+  customMessage: string;
+  walletAddress: string;
+  tokenId: string;
+  transactionHash: string;
+  nftTokenId: string;
+  blockchainTxHash: string;
+  issueDate: string;
+  course: {
+    _id: string;
+    title: string;
+    category: string;
+    description: string;
+    thumbnail: string;
+  };
+  issuedBy: {
+    _id: string;
+    username: string;
+    email: string;
+    name: string;
+  };
+}
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -35,6 +69,8 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showMyListings, setShowMyListings] = useState(false);
+  const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
+  const [loadingCertificates, setLoadingCertificates] = useState(false);
 
   // Load enrolled courses when component mounts
   useEffect(() => {
@@ -45,38 +81,33 @@ export default function StudentDashboard() {
     }
   }, [user, refreshEnrolledCourses]);
 
+  // Load student certificates
+  useEffect(() => {
+    const loadCertificates = async () => {
+      if (!user) return;
+
+      try {
+        setLoadingCertificates(true);
+        const studentCertificates = await certificateAPI.getStudentCertificates();
+        setCertificates(studentCertificates);
+      } catch (error) {
+        console.error('Error loading certificates:', error);
+        setCertificates([]);
+      } finally {
+        setLoadingCertificates(false);
+      }
+    };
+
+    if (user?.role === 'student') {
+      loadCertificates();
+    }
+  }, [user]);
+
   const stats = [
     { icon: BookOpen, label: 'Courses Enrolled', value: (enrolledCourses?.length || 0).toString(), color: 'text-blue-600' },
-    { icon: Trophy, label: 'Certificates Earned', value: '3', color: 'text-green-600' },
-    { icon: Coins, label: 'SkillTokens', value: '3,750', color: 'text-primary' },
+    { icon: Trophy, label: 'Certificates Earned', value: certificates.length.toString(), color: 'text-green-600' },
+    { icon: Coins, label: 'SkillTokens', value: certificates.reduce((total, cert) => total + cert.skillTokensAwarded, 0).toString(), color: 'text-primary' },
     { icon: TrendingUp, label: 'Learning Streak', value: '18 days', color: 'text-purple-600' }
-  ];
-
-  const certificates = [
-    {
-      id: 1,
-      title: 'NFT Art Creation Mastery',
-      date: '2024-01-15',
-      tokenId: '#NFT-001',
-      value: '0.12 ETH',
-      category: 'nft'
-    },
-    {
-      id: 2,
-      title: 'Blockchain Fundamentals',
-      date: '2024-02-20',
-      tokenId: '#NFT-002',
-      value: '0.08 ETH',
-      category: 'blockchain'
-    },
-    {
-      id: 3,
-      title: 'Metaverse Development',
-      date: '2024-03-10',
-      tokenId: '#NFT-003',
-      value: '0.18 ETH',
-      category: 'metaverse'
-    }
   ];
 
   // Filter active marketplace listings
@@ -167,11 +198,11 @@ export default function StudentDashboard() {
                           />
                           <div className="absolute -top-1 -right-1">
                             <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                                course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                                  course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                    course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                      course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                        'bg-pink-100 text-pink-800'
+                              course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                                course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                  course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                    course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                      'bg-pink-100 text-pink-800'
                               }`}>
                               {course.category}
                             </span>
@@ -361,11 +392,11 @@ export default function StudentDashboard() {
                       />
                       <div className="absolute top-4 right-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                              course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                  course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                    'bg-pink-100 text-pink-800'
+                          course.category === 'web3' ? 'bg-green-100 text-green-800' :
+                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                              course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                  'bg-pink-100 text-pink-800'
                           }`}>
                           {course.category.toUpperCase()}
                         </span>
@@ -438,65 +469,83 @@ export default function StudentDashboard() {
               </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {certificates.map((cert) => {
-                const isListed = getActiveListing(cert.id.toString());
-                return (
-                  <Card key={cert.id} className="p-6 hover:shadow-elevation animate-smooth relative">
-                    {isListed && (
-                      <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                        <ShoppingCart className="w-3 h-3 mr-1" />
-                        Listed for Sale
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between mb-4">
-                      <Award className="w-12 h-12 text-primary" />
-                      <div className="flex flex-col items-end space-y-1">
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
-                        <span className={`text-xs px-2 py-1 rounded ${cert.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            cert.category === 'web3' ? 'bg-green-100 text-green-800' :
-                              cert.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                cert.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                  cert.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                    'bg-pink-100 text-pink-800'
-                          }`}>
-                          {cert.category}
-                        </span>
-                      </div>
-                    </div>
-                    <h4 className="font-semibold text-lg mb-2">{cert.title}</h4>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>Token ID: {cert.tokenId}</p>
-                      <p>Earned: {new Date(cert.date).toLocaleDateString()}</p>
-                      <p className="font-medium text-foreground">Market Value: {cert.value}</p>
-                      {isListed && (
-                        <p className="font-medium text-green-600">
-                          Listed for: {isListed.price} {isListed.currency}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex space-x-2 mt-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => navigate(`/verify-certificate/${cert.id}`)}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Verify
-                      </Button>
-                      <Button
-                        size="sm"
-                        className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
-                        onClick={() => !isListed && navigate(`/list-certificate/${cert.id}`)}
-                        disabled={!!isListed}
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        {isListed ? 'Listed' : 'List for Sale'}
-                      </Button>
-                    </div>
+              {loadingCertificates ? (
+                <div className="col-span-full flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin mr-3" />
+                  <span>Loading your certificates...</span>
+                </div>
+              ) : certificates.length === 0 ? (
+                <div className="col-span-full">
+                  <Card className="p-12 text-center">
+                    <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Certificates Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Complete courses to earn your first NFT certificate!
+                    </p>
+                    <Button onClick={() => navigate('/courses')}>
+                      Browse Courses
+                    </Button>
                   </Card>
-                );
-              })}
+                </div>
+              ) : (
+                certificates.map((cert) => {
+                  const isListed = getActiveListing(cert._id);
+                  return (
+                    <Card key={cert._id} className="p-6 hover:shadow-elevation animate-smooth relative">
+                      {isListed && (
+                        <div className="absolute top-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                          <ShoppingCart className="w-3 h-3 mr-1" />
+                          Listed for Sale
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between mb-4">
+                        <Award className="w-12 h-12 text-primary" />
+                        <div className="flex flex-col items-end space-y-1">
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
+                          <span className={`text-xs px-2 py-1 rounded capitalize ${cert.certificateType === 'mastery' ? 'bg-purple-100 text-purple-800' :
+                              cert.certificateType === 'excellence' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-blue-100 text-blue-800'
+                            }`}>
+                            {cert.certificateType}
+                          </span>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-lg mb-2">{cert.courseName}</h4>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>Token ID: {cert.tokenId}</p>
+                        <p>Earned: {new Date(cert.issueDate).toLocaleDateString()}</p>
+                        <p>Grade: {cert.grade}%</p>
+                        <p>Skill Tokens: {cert.skillTokensAwarded}</p>
+                        {isListed && (
+                          <p className="font-medium text-green-600">
+                            Listed for: {isListed.price} {isListed.currency}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex space-x-2 mt-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => navigate(`/verify-certificate/${cert._id}`)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Verify
+                        </Button>
+                        <Button
+                          size="sm"
+                          className={`flex-1 ${isListed ? 'bg-gray-400 cursor-not-allowed' : 'gradient-primary'}`}
+                          onClick={() => !isListed && navigate(`/list-certificate/${cert._id}`)}
+                          disabled={!!isListed}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          {isListed ? 'Listed' : 'List for Sale'}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </TabsContent>
 
@@ -569,11 +618,11 @@ export default function StudentDashboard() {
                       <Trophy className="w-12 h-12 text-primary group-hover:text-primary/80 group-hover:rotate-12 transition-all duration-300" />
                       <div className="text-right">
                         <span className={`inline-block text-xs px-2 py-1 rounded mb-2 ${item.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
-                            item.category === 'web3' ? 'bg-green-100 text-green-800' :
-                              item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                  item.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                    'bg-pink-100 text-pink-800'
+                          item.category === 'web3' ? 'bg-green-100 text-green-800' :
+                            item.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                              item.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                item.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                  'bg-pink-100 text-pink-800'
                           }`}>
                           {item.category}
                         </span>
@@ -598,9 +647,9 @@ export default function StudentDashboard() {
                       <div className="flex items-center justify-between">
                         <span>Rarity:</span>
                         <span className={`px-2 py-1 rounded text-xs ${item.rarity === 'Common' ? 'bg-gray-100 text-gray-800' :
-                            item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
-                              item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
-                                'bg-yellow-100 text-yellow-800'
+                          item.rarity === 'Rare' ? 'bg-blue-100 text-blue-800' :
+                            item.rarity === 'Epic' ? 'bg-purple-100 text-purple-800' :
+                              'bg-yellow-100 text-yellow-800'
                           }`}>
                           {item.rarity}
                         </span>

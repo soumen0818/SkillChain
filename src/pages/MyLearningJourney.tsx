@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import { courseAPI } from '@/lib/api';
+import {
   ArrowLeft,
-  BookOpen, 
+  BookOpen,
   PlayCircle,
   Clock,
   Star,
@@ -32,26 +33,28 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Course {
-  id: number;
+  _id: string;
   title: string;
-  instructor: string;
+  teacher: {
+    username: string;
+  };
   progress: number;
   duration: string;
   category: string;
-  difficulty: string;
+  level: string;
   rating: number;
-  students: number;
+  students: any[];
   nextLesson: string;
   completedLessons: number;
   totalLessons: number;
   timeSpent: string;
   estimatedTimeLeft: string;
-  lastAccessed: string;
+  updatedAt: string;
   status: 'active' | 'completed' | 'paused';
   skillTokensEarned: number;
-  skillTokensPotential: number;
+  skillTokenReward: string;
   thumbnail: string;
-  enrollmentDate: string;
+  createdAt: string;
   certificateEligible: boolean;
 }
 
@@ -62,148 +65,42 @@ export default function MyLearningJourney() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('progress');
   const [filterBy, setFilterBy] = useState('all');
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock student courses data - in real app, this would come from your backend/context
-  const enrolledCourses: Course[] = [
-    {
-      id: 1,
-      title: 'Blockchain Fundamentals',
-      instructor: 'Dr. Sarah Johnson',
-      progress: 75,
-      duration: '8 weeks',
-      category: 'Blockchain',
-      difficulty: 'Beginner',
-      rating: 4.8,
-      students: 1247,
-      nextLesson: 'Smart Contracts Introduction',
-      completedLessons: 18,
-      totalLessons: 24,
-      timeSpent: '12.5 hours',
-      estimatedTimeLeft: '4.2 hours',
-      lastAccessed: '2 hours ago',
-      status: 'active',
-      skillTokensEarned: 350,
-      skillTokensPotential: 500,
-      thumbnail: 'https://images.unsplash.com/photo-1518896012122-3dcff33c6334?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-01-15',
-      certificateEligible: false
-    },
-    {
-      id: 2,
-      title: 'Web3 Development with React',
-      instructor: 'Mark Thompson',
-      progress: 45,
-      duration: '12 weeks',
-      category: 'Development',
-      difficulty: 'Intermediate',
-      rating: 4.6,
-      students: 892,
-      nextLesson: 'Building DApps with React',
-      completedLessons: 14,
-      totalLessons: 32,
-      timeSpent: '18.3 hours',
-      estimatedTimeLeft: '22.7 hours',
-      lastAccessed: '1 day ago',
-      status: 'active',
-      skillTokensEarned: 280,
-      skillTokensPotential: 650,
-      thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-02-01',
-      certificateEligible: false
-    },
-    {
-      id: 3,
-      title: 'NFT Art Creation & Marketing',
-      instructor: 'Lisa Chen',
-      progress: 100,
-      duration: '6 weeks',
-      category: 'NFTs',
-      difficulty: 'Beginner',
-      rating: 4.9,
-      students: 634,
-      nextLesson: 'Course Completed',
-      completedLessons: 20,
-      totalLessons: 20,
-      timeSpent: '15.8 hours',
-      estimatedTimeLeft: '0 hours',
-      lastAccessed: '3 days ago',
-      status: 'completed',
-      skillTokensEarned: 400,
-      skillTokensPotential: 400,
-      thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-01-20',
-      certificateEligible: true
-    },
-    {
-      id: 4,
-      title: 'DeFi Protocol Deep Dive',
-      instructor: 'Alex Rodriguez',
-      progress: 30,
-      duration: '10 weeks',
-      category: 'DeFi',
-      difficulty: 'Advanced',
-      rating: 4.7,
-      students: 456,
-      nextLesson: 'Liquidity Pools Explained',
-      completedLessons: 8,
-      totalLessons: 28,
-      timeSpent: '9.2 hours',
-      estimatedTimeLeft: '21.8 hours',
-      lastAccessed: '5 days ago',
-      status: 'paused',
-      skillTokensEarned: 150,
-      skillTokensPotential: 700,
-      thumbnail: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-02-15',
-      certificateEligible: false
-    },
-    {
-      id: 5,
-      title: 'Smart Contract Security Audit',
-      instructor: 'David Kim',
-      progress: 85,
-      duration: '8 weeks',
-      category: 'Security',
-      difficulty: 'Advanced',
-      rating: 4.8,
-      students: 328,
-      nextLesson: 'Final Security Assessment',
-      completedLessons: 21,
-      totalLessons: 25,
-      timeSpent: '22.4 hours',
-      estimatedTimeLeft: '3.1 hours',
-      lastAccessed: '1 hour ago',
-      status: 'active',
-      skillTokensEarned: 420,
-      skillTokensPotential: 550,
-      thumbnail: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-01-10',
-      certificateEligible: false
-    },
-    {
-      id: 6,
-      title: 'Cryptocurrency Trading Strategies',
-      instructor: 'Emma Wilson',
-      progress: 60,
-      duration: '6 weeks',
-      category: 'Trading',
-      difficulty: 'Intermediate',
-      rating: 4.5,
-      students: 789,
-      nextLesson: 'Technical Analysis Advanced',
-      completedLessons: 12,
-      totalLessons: 20,
-      timeSpent: '14.7 hours',
-      estimatedTimeLeft: '9.8 hours',
-      lastAccessed: '2 days ago',
-      status: 'active',
-      skillTokensEarned: 240,
-      skillTokensPotential: 450,
-      thumbnail: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=200&fit=crop',
-      enrollmentDate: '2024-02-20',
-      certificateEligible: false
+  useEffect(() => {
+    const fetchEnrolledCourses = async () => {
+      try {
+        setLoading(true);
+        const courses = await courseAPI.getEnrolledCourses();
+
+        // Simulate progress and other student-specific data for now
+        const coursesWithProgress = courses.map((course: any) => ({
+          ...course,
+          progress: Math.floor(Math.random() * 100),
+          status: course.progress === 100 ? 'completed' : ['active', 'paused'][Math.floor(Math.random() * 2)],
+          timeSpent: `${(Math.random() * 20).toFixed(1)} hours`,
+          estimatedTimeLeft: `${(Math.random() * 10).toFixed(1)} hours`,
+          completedLessons: Math.floor(Math.random() * course.totalLessons),
+          nextLesson: 'Next up: Introduction',
+          skillTokensEarned: Math.floor(Math.random() * parseInt(course.skillTokenReward || '0')),
+        }));
+
+        setEnrolledCourses(coursesWithProgress);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch enrolled courses.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchEnrolledCourses();
     }
-  ];
+  }, [user]);
 
   const getFilteredCourses = () => {
     let filtered = enrolledCourses;
@@ -220,9 +117,9 @@ export default function MyLearningJourney() {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(course => 
+      filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.teacher && course.teacher.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
         course.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -233,7 +130,7 @@ export default function MyLearningJourney() {
         case 'progress':
           return b.progress - a.progress;
         case 'recent':
-          return new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime();
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         case 'title':
           return a.title.localeCompare(b.title);
         case 'rating':
@@ -287,19 +184,40 @@ export default function MyLearningJourney() {
     totalCourses: enrolledCourses.length,
     activeCourses: enrolledCourses.filter(c => c.status === 'active').length,
     completedCourses: enrolledCourses.filter(c => c.status === 'completed').length,
-    totalProgress: Math.round(enrolledCourses.reduce((sum, course) => sum + course.progress, 0) / enrolledCourses.length),
+    totalProgress: enrolledCourses.length > 0 ? Math.round(enrolledCourses.reduce((sum, course) => sum + course.progress, 0) / enrolledCourses.length) : 0,
     totalSkillTokens: enrolledCourses.reduce((sum, course) => sum + course.skillTokensEarned, 0),
     totalTimeSpent: enrolledCourses.reduce((sum, course) => sum + parseFloat(course.timeSpent), 0).toFixed(1),
     certificatesEligible: enrolledCourses.filter(c => c.certificateEligible).length
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <BookOpen className="w-12 h-12 mx-auto text-blue-500 animate-bounce" />
+          <p className="text-lg font-semibold mt-4">Loading your learning journey...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center text-red-500">
+          <p className="text-lg font-semibold">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/student/dashboard')}
             className="mb-4"
           >
@@ -395,12 +313,9 @@ export default function MyLearningJourney() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="blockchain">Blockchain</SelectItem>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="nfts">NFTs</SelectItem>
-                  <SelectItem value="defi">DeFi</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="trading">Trading</SelectItem>
+                  {[...new Set(enrolledCourses.map(c => c.category))].map(category => (
+                    <SelectItem key={category} value={category.toLowerCase()}>{category}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
@@ -431,12 +346,12 @@ export default function MyLearningJourney() {
             <div className="grid gap-6">
               {getFilteredCourses().map((course) => {
                 const StatusIcon = getStatusIcon(course.status);
-                
+
                 return (
-                  <Card key={course.id} className="p-6 shadow-lg border-0 hover:shadow-xl transition-all duration-300">
+                  <Card key={course._id} className="p-6 shadow-lg border-0 hover:shadow-xl transition-all duration-300">
                     <div className="flex items-start space-x-6">
-                      <img 
-                        src={course.thumbnail} 
+                      <img
+                        src={course.thumbnail || 'https://via.placeholder.com/300x200'}
                         alt={course.title}
                         className="w-32 h-24 rounded-lg object-cover"
                       />
@@ -445,9 +360,9 @@ export default function MyLearningJourney() {
                           <div>
                             <h3 className="text-xl font-semibold mb-2">{course.title}</h3>
                             <div className="flex items-center space-x-4 mb-3">
-                              <span className="text-muted-foreground">by {course.instructor}</span>
-                              <Badge className={getDifficultyColor(course.difficulty)}>
-                                {course.difficulty}
+                              <span className="text-muted-foreground">by {course.teacher?.username || 'Unknown Instructor'}</span>
+                              <Badge className={getDifficultyColor(course.level)}>
+                                {course.level}
                               </Badge>
                               <Badge className={`${getStatusColor(course.status)} text-white`}>
                                 {course.status}
@@ -466,7 +381,7 @@ export default function MyLearningJourney() {
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Users className="w-4 h-4" />
-                                <span>{course.students} students</span>
+                                <span>{course.students.length} students</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="w-4 h-4" />
@@ -474,7 +389,7 @@ export default function MyLearningJourney() {
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="w-4 h-4" />
-                                <span>Last accessed {course.lastAccessed}</span>
+                                <span>Last accessed {new Date(course.updatedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
                           </div>
@@ -507,7 +422,7 @@ export default function MyLearningJourney() {
                               <div className="text-muted-foreground">SkillTokens Earned</div>
                               <div className="font-semibold flex items-center">
                                 <Coins className="w-4 h-4 text-yellow-500 mr-1" />
-                                {course.skillTokensEarned}/{course.skillTokensPotential}
+                                {course.skillTokensEarned}/{course.skillTokenReward}
                               </div>
                             </div>
                             <div>
@@ -519,27 +434,37 @@ export default function MyLearningJourney() {
                           {/* Action Buttons - Download section removed */}
                           <div className="flex items-center justify-between pt-4 border-t">
                             <div className="flex space-x-3">
-                              <Button 
+                              <Button
                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                                 disabled={course.status === 'completed'}
-                                onClick={() => course.status !== 'completed' && navigate(`/course-study/${course.id}`)}
+                                onClick={() => course.status !== 'completed' && navigate(`/course-study/${course._id}`)}
                               >
                                 <StatusIcon className="w-4 h-4 mr-2" />
-                                {course.status === 'completed' ? 'Completed' : 
-                                 course.status === 'paused' ? 'Resume' : 'Continue'}
+                                {course.status === 'completed' ? 'Completed' :
+                                  course.status === 'paused' ? 'Resume' : 'Continue'}
                               </Button>
-                              <Button 
+                              <Button
                                 variant="outline"
-                                onClick={() => navigate(`/course-progress/${course.id}`)}
+                                onClick={() => navigate(`/course-progress/${course._id}`)}
                               >
                                 <BarChart3 className="w-4 h-4 mr-2" />
                                 Progress
                               </Button>
-                              {course.certificateEligible && (
-                                <Button 
-                                  variant="outline" 
+                              {course.status === 'completed' && (
+                                <Button
+                                  variant="outline"
+                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                  onClick={() => navigate(`/get-certificate/${course._id}`)}
+                                >
+                                  <Award className="w-4 h-4 mr-2" />
+                                  Generate Certificate
+                                </Button>
+                              )}
+                              {course.certificateEligible && course.status !== 'completed' && (
+                                <Button
+                                  variant="outline"
                                   className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
-                                  onClick={() => navigate(`/get-certificate/${course.id}`)}
+                                  onClick={() => navigate(`/get-certificate/${course._id}`)}
                                 >
                                   <Award className="w-4 h-4 mr-2" />
                                   Get Certificate
@@ -562,7 +487,7 @@ export default function MyLearningJourney() {
                 <p className="text-muted-foreground mb-4">
                   No courses match your current filters.
                 </p>
-                <Button 
+                <Button
                   onClick={() => {
                     setSearchTerm('');
                     setFilterBy('all');
