@@ -17,7 +17,7 @@ declare global {
 }
 
 export default function Signup() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -90,7 +90,7 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      const success = await signup(name, email, password, walletAddress, role);
+      const success = await signup(username, email, password, walletAddress, role);
 
       if (success) {
         toast({
@@ -101,16 +101,23 @@ export default function Signup() {
         const redirectPath = role === 'student' ? '/student/dashboard' : '/teacher/dashboard';
         navigate(redirectPath);
       } else {
+        // Try to get the error message from the last error thrown in signup
+        let errorMsg = "Please check your information and try again.";
+        if ((window as any).lastSignupError) {
+          errorMsg = (window as any).lastSignupError;
+          (window as any).lastSignupError = undefined;
+        }
         toast({
           title: "Signup failed",
-          description: "Please check your information and try again.",
+          description: errorMsg,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      let errorMsg = error?.customMessage || "Something went wrong. Please try again.";
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -159,8 +166,8 @@ export default function Signup() {
               <Input
                 id="name"
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your full name"
                 required
                 className="h-12"

@@ -2,6 +2,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
@@ -9,7 +10,7 @@ const certificateRoutes = require('./routes/certificates');
 const uploadRoutes = require('./routes/upload');
 const discussionRoutes = require('./routes/discussions');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 connectDB();
 
 const app = express();

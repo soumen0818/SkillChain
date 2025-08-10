@@ -78,8 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         return true;
       }
-    } catch (error) {
-      console.error('Signup failed', error);
+    } catch (error: any) {
+      let errorMsg = 'Signup failed';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMsg = error.response.data.message;
+      }
+      console.error('Signup failed:', errorMsg);
+      // Attach error message to error object for toast
+      (error as any).customMessage = errorMsg;
     }
     setIsLoading(false);
     return false;

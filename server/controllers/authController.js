@@ -1,4 +1,3 @@
-
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -17,6 +16,16 @@ const signup = async (req, res) => {
 
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const usernameExists = await User.findOne({ username });
+    if (usernameExists) {
+      return res.status(400).json({ message: 'Username is already taken' });
+    }
+
+    const walletExists = await User.findOne({ walletAddress });
+    if (walletExists) {
+      return res.status(400).json({ message: 'Wallet address is already registered' });
     }
 
     const salt = await bcrypt.genSalt(10);
