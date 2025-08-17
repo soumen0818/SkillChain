@@ -15,7 +15,6 @@ import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import CreateCourse from "./pages/CreateCourse";
 import UploadContent from "./pages/UploadContent";
-import IssueCertificate from "./pages/IssueCertificate";
 import TeacherAnalytics from "./pages/TeacherAnalytics";
 import MyLearningJourney from "./pages/MyLearningJourney";
 import CourseStudy from "./pages/CourseStudyReal";
@@ -136,15 +135,6 @@ const App = () => (
                 />
 
                 <Route
-                  path="/teacher-dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={['teacher']}>
-                      <TeacherDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
                   path="/teacher/dashboard"
                   element={
                     <ProtectedRoute allowedRoles={['teacher']}>
@@ -167,15 +157,6 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={['teacher']}>
                       <UploadContent />
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
-                  path="/issue-certificate"
-                  element={
-                    <ProtectedRoute allowedRoles={['teacher']}>
-                      <IssueCertificate />
                     </ProtectedRoute>
                   }
                 />
@@ -239,7 +220,6 @@ const App = () => (
                 <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/profile" element={<div className="pt-20 text-center">Profile page coming soon!</div>} />
-                <Route path="/wallet" element={<div className="pt-20 text-center">Wallet page coming soon!</div>} />
 
                 {/* Certificate Pages */}
                 <Route
