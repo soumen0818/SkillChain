@@ -25,6 +25,16 @@ const UserSchema = new mongoose.Schema({
     enum: ['student', 'teacher', 'admin'],
     default: 'student',
   },
+  bio: {
+    type: String,
+    default: '',
+    maxLength: 500,
+  },
+  teachingTitle: {
+    type: String,
+    default: '',
+    maxLength: 100,
+  },
   enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
   createdCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
 }, { timestamps: true });
