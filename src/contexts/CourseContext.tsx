@@ -34,6 +34,7 @@ export interface Course {
     _id: string;
     username: string;
     email: string;
+    walletAddress: string;
   };
 }
 
@@ -77,39 +78,58 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
+      console.log('📡 Fetching courses from API...');
       const coursesData = await courseAPI.getAll();
+      console.log('✅ API Response received:', coursesData.length, 'courses');
+      console.log('📋 First course syllabus:', coursesData[0]?.syllabus);
       // Transform backend course data to frontend format
-      const transformedCourses = coursesData.map((course: any) => ({
-        id: course._id,
-        _id: course._id,
-        title: course.title || 'Untitled Course',
-        description: course.description || 'No description available',
-        category: course.category || 'General',
-        level: course.level || 'Beginner',
-        duration: course.duration || 'TBD',
-        price: course.price || '0',
-        skillTokenReward: course.skillTokenReward || '0',
-        prerequisites: course.prerequisites || [],
-        learningOutcomes: course.learningOutcomes || [],
-        thumbnail: course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop',
-        status: course.status || 'active', // Default to active for existing courses
-        students: course.students ? course.students.length : 0,
-        rating: course.rating || 0,
-        reviews: course.reviews || 0,
-        completion: 0, // Calculate based on enrollment data if available
-        earnings: course.earnings || '0 ETH',
-        skillTokens: course.skillTokens || '0 SKILL',
-        lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : 'Recently',
-        modules: course.modules || 0,
-        totalLessons: course.totalLessons || 0,
-        certificates: course.certificates || 0,
-        enrollmentTrend: course.enrollmentTrend || '+0%',
-        createdAt: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '',
-        teacherId: course.teacher?._id || course.teacher,
-        curriculum: course.syllabus || [],
-        syllabus: course.syllabus || [],
-        teacher: course.teacher,
-      }));
+      const transformedCourses = coursesData.map((course: any) => {
+        // Transform syllabus to ensure video URLs are properly mapped
+        const transformedSyllabus = course.syllabus ? course.syllabus.map((module: any) => ({
+          ...module,
+          lessons: module.lessons ? module.lessons.map((lesson: any) => ({
+            ...lesson,
+            // Map the 'content' field to 'videoUrl' for video lessons
+            videoUrl: lesson.type === 'video' ? lesson.content : lesson.videoUrl,
+            // Map the 'content' field to 'documentUrl' for document lessons
+            documentUrl: lesson.type === 'document' ? lesson.content : lesson.documentUrl,
+          })) : []
+        })) : [];
+
+        return {
+          id: course._id,
+          _id: course._id,
+          title: course.title || 'Untitled Course',
+          description: course.description || 'No description available',
+          category: course.category || 'General',
+          level: course.level || 'Beginner',
+          duration: course.duration || 'TBD',
+          price: course.price || '0',
+          skillTokenReward: course.skillTokenReward || '0',
+          prerequisites: course.prerequisites || [],
+          learningOutcomes: course.learningOutcomes || [],
+          thumbnail: course.thumbnail || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&h=200&fit=crop',
+          status: course.status || 'active', // Default to active for existing courses
+          students: course.students ? course.students.length : 0,
+          rating: course.rating || 0,
+          reviews: course.reviews || 0,
+          completion: 0, // Calculate based on enrollment data if available
+          earnings: course.earnings || '0 ETH',
+          skillTokens: course.skillTokens || '0 SKILL',
+          lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : 'Recently',
+          modules: course.modules || 0,
+          totalLessons: course.totalLessons || 0,
+          certificates: course.certificates || 0,
+          enrollmentTrend: course.enrollmentTrend || '+0%',
+          createdAt: course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '',
+          teacherId: course.teacher?._id || course.teacher,
+          curriculum: transformedSyllabus,
+          syllabus: transformedSyllabus,
+          teacher: course.teacher,
+        };
+      });
+      console.log('🔄 Courses transformed:', transformedCourses.length);
+      console.log('📹 First course video URLs:', transformedCourses[0]?.syllabus?.[0]?.lessons?.map(l => l.videoUrl));
       setCourses(transformedCourses);
     } catch (err: any) {
       setError(err.message);
@@ -141,7 +161,49 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           certificates: 38,
           enrollmentTrend: '+12%',
           createdAt: '2024-01-15',
-          teacherId: 'teacher1'
+          teacherId: 'teacher1',
+          syllabus: [
+            {
+              _id: 'module1',
+              title: 'Introduction to Blockchain',
+              description: 'Learn the fundamentals of blockchain technology and its applications',
+              duration: '2 hours',
+              lessons: [
+                {
+                  _id: 'lesson1',
+                  title: 'What is Blockchain?',
+                  type: 'video',
+                  duration: '15 min',
+                  videoUrl: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4',
+                  content: 'Introduction to blockchain technology concepts'
+                },
+                {
+                  _id: 'lesson2',
+                  title: 'Blockchain Architecture',
+                  type: 'document',
+                  duration: '20 min',
+                  documentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                  content: 'Understanding the structure and components of blockchain'
+                }
+              ]
+            },
+            {
+              _id: 'module2',
+              title: 'Cryptocurrency Basics',
+              description: 'Understanding digital currencies and their role in blockchain',
+              duration: '1.5 hours',
+              lessons: [
+                {
+                  _id: 'lesson3',
+                  title: 'Digital Currency Overview',
+                  type: 'video',
+                  duration: '25 min',
+                  videoUrl: 'https://file-examples.com/storage/fef1ad09be79ad4c25d09da/2017/10/file_example_MP4_640_3MG.mp4',
+                  content: 'Overview of digital currencies and their evolution'
+                }
+              ]
+            }
+          ]
         },
         {
           id: '2',
@@ -168,7 +230,49 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           certificates: 24,
           enrollmentTrend: '+8%',
           createdAt: '2024-02-20',
-          teacherId: 'teacher1'
+          teacherId: 'teacher1',
+          syllabus: [
+            {
+              _id: 'module3',
+              title: 'Advanced Solidity Patterns',
+              description: 'Master advanced programming patterns in Solidity',
+              duration: '3 hours',
+              lessons: [
+                {
+                  _id: 'lesson4',
+                  title: 'Factory Pattern Implementation',
+                  type: 'video',
+                  duration: '30 min',
+                  videoUrl: 'https://file-examples.com/storage/fe0e55b73b2e4b49dca1b52/2017/10/file_example_MP4_480_1_5MG.mp4',
+                  content: 'Learn how to implement the factory pattern in smart contracts'
+                },
+                {
+                  _id: 'lesson5',
+                  title: 'Proxy Patterns and Upgradability',
+                  type: 'document',
+                  duration: '45 min',
+                  documentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                  content: 'Understanding proxy patterns for upgradeable contracts'
+                }
+              ]
+            },
+            {
+              _id: 'module4',
+              title: 'Security Best Practices',
+              description: 'Learn essential security measures for smart contracts',
+              duration: '4 hours',
+              lessons: [
+                {
+                  _id: 'lesson6',
+                  title: 'Common Vulnerabilities',
+                  type: 'video',
+                  duration: '40 min',
+                  videoUrl: 'https://file-examples.com/storage/fe0e55b73b2e4b49dca1b52/2017/10/file_example_MP4_1280_10MG.mp4',
+                  content: 'Overview of common smart contract vulnerabilities'
+                }
+              ]
+            }
+          ]
         },
       ];
       setCourses(defaultCourses);
