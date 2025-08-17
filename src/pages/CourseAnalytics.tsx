@@ -77,7 +77,7 @@ export default function CourseAnalytics() {
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Course Analytics</h3>
               <p className="text-gray-600 mb-4">{error}</p>
-              <Button onClick={() => navigate('/teacher-dashboard')}>
+              <Button onClick={() => navigate('/teacher/dashboard')}>
                 Back to Dashboard
               </Button>
             </div>
@@ -93,7 +93,7 @@ export default function CourseAnalytics() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
-            <Button onClick={() => navigate('/teacher-dashboard')}>
+            <Button onClick={() => navigate('/teacher/dashboard')}>
               Back to Dashboard
             </Button>
           </div>
@@ -113,7 +113,7 @@ export default function CourseAnalytics() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/teacher-dashboard')}
+              onClick={() => navigate('/teacher/dashboard')}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
