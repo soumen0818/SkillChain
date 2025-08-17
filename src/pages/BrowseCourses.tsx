@@ -173,8 +173,14 @@ export default function BrowseCourses() {
         throw new Error('Wallet connection failed');
       }
 
-      // Pay for the course
-      const transactionHash = await walletService.payForCourse(course.price || '0.01');
+      // Get teacher's wallet address for payment
+      const teacherWalletAddress = course.teacher?.walletAddress;
+      if (!teacherWalletAddress) {
+        throw new Error('Teacher wallet address not found');
+      }
+
+      // Pay for the course - pass teacher's wallet address as recipient
+      const transactionHash = await walletService.payForCourse(course.price || '0.01', teacherWalletAddress);
       if (!transactionHash) {
         throw new Error('Payment failed');
       }
@@ -189,7 +195,7 @@ export default function BrowseCourses() {
       alert(`Payment successful! Transaction hash: ${transactionHash}\nYou have been enrolled in the course.`);
 
       // Navigate to student dashboard
-      navigate('/student-dashboard');
+      navigate('/student/dashboard');
     } catch (err) {
       console.error('Enrollment/Payment failed:', err);
       alert(`Failed to complete enrollment: ${err instanceof Error ? err.message : 'Unknown error'}`);
