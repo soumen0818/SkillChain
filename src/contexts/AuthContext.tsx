@@ -11,12 +11,15 @@ export interface User {
   walletAddress: string;
   token: string;
   avatar?: string;
+  bio?: string;
+  teachingTitle?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
   signup: (username: string, email: string, password: string, walletAddress: string, role: UserRole) => Promise<boolean>;
+  updateProfile: (profileData: Partial<User>) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -91,6 +94,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const updateProfile = async (profileData: Partial<User>): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const { data } = await axios.put(`${API_URL}/profile`, profileData);
+      if (data) {
+        const updatedUser: User = {
+          ...data,
+          avatar: user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`
+        };
+        setUser(updatedUser);
+        localStorage.setItem('skillchain_user', JSON.stringify(updatedUser));
+        setIsLoading(false);
+        return true;
+      }
+    } catch (error: any) {
+      console.error('Profile update failed:', error);
+    }
+    setIsLoading(false);
+    return false;
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('skillchain_user');
@@ -101,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     login,
     signup,
+    updateProfile,
     logout,
     isLoading
   };
