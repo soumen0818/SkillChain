@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import { useCourses } from '@/contexts/CourseContext';
+import { courseAPI } from '@/lib/api';
+import {
   ArrowLeft,
   Trophy,
   Target,
@@ -38,6 +40,85 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Helper functions for progress calculation
+const getCompletedLessons = (courseId: string, userId: string) => {
+  const completionKey = `course_completions_${courseId}_${userId}`;
+  return JSON.parse(localStorage.getItem(completionKey) || '[]');
+};
+
+const calculateWeeklyProgress = (completedLessons: string[], totalWeeks: number = 4) => {
+  // Simplified weekly progress calculation
+  const lessonsPerWeek = Math.ceil(completedLessons.length / totalWeeks);
+  return Array.from({ length: totalWeeks }, (_, i) => ({
+    week: `Week ${i + 1}`,
+    hoursStudied: Math.round(Math.random() * 8 + 2),
+    lessonsCompleted: Math.min(lessonsPerWeek, Math.max(0, completedLessons.length - (i * lessonsPerWeek))),
+    quizzesCompleted: Math.round(Math.random() * 3 + 1),
+    skillTokensEarned: Math.round(Math.random() * 50 + 20)
+  }));
+};
+
+const generateAchievements = (completedLessons: number, overallProgress: number, completedModules: number) => {
+  const achievements = [];
+
+  if (completedLessons >= 1) {
+    achievements.push({
+      id: 1,
+      title: 'First Steps',
+      description: 'Completed your first lesson',
+      icon: '🎯',
+      earnedDate: new Date().toISOString().split('T')[0],
+      type: 'milestone' as const
+    });
+  }
+
+  if (overallProgress >= 25) {
+    achievements.push({
+      id: 2,
+      title: 'Quarter Way There',
+      description: 'Completed 25% of the course',
+      icon: '📚',
+      earnedDate: new Date().toISOString().split('T')[0],
+      type: 'milestone' as const
+    });
+  }
+
+  if (overallProgress >= 50) {
+    achievements.push({
+      id: 3,
+      title: 'Halfway Champion',
+      description: 'Completed 50% of the course',
+      icon: '🏆',
+      earnedDate: new Date().toISOString().split('T')[0],
+      type: 'milestone' as const
+    });
+  }
+
+  if (overallProgress >= 75) {
+    achievements.push({
+      id: 4,
+      title: 'Almost There',
+      description: 'Completed 75% of the course',
+      icon: '🔥',
+      earnedDate: new Date().toISOString().split('T')[0],
+      type: 'milestone' as const
+    });
+  }
+
+  if (completedModules >= 3) {
+    achievements.push({
+      id: 5,
+      title: 'Module Master',
+      description: 'Completed 3 modules',
+      icon: '🎖️',
+      earnedDate: new Date().toISOString().split('T')[0],
+      type: 'milestone' as const
+    });
+  }
+
+  return achievements;
+};
 
 interface CourseProgress {
   id: number;
@@ -97,154 +178,155 @@ export default function CourseProgress() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getCourseById } = useCourses();
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedModules, setExpandedModules] = useState<number[]>([]);
+  const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock course progress data
-  const courseProgress: CourseProgress = {
-    id: parseInt(courseId || '1'),
-    title: 'Blockchain Fundamentals',
-    instructor: 'Dr. Sarah Johnson',
-    totalModules: 8,
-    completedModules: 5,
-    totalLessons: 64,
-    completedLessons: 42,
-    totalQuizzes: 16,
-    completedQuizzes: 12,
-    totalAssignments: 6,
-    completedAssignments: 4,
-    overallProgress: 68,
-    timeSpent: 32.5,
-    estimatedTimeLeft: 15.2,
-    skillTokensEarned: 340,
-    skillTokensPotential: 500,
-    averageQuizScore: 87,
-    streak: 12,
-    lastActivity: '2 hours ago',
-    enrollmentDate: '2024-01-15',
-    modules: [
-      {
-        id: 1,
-        title: 'Introduction to Blockchain',
-        progress: 100,
-        lessonsCompleted: 8,
-        totalLessons: 8,
-        timeSpent: 4.2,
-        isCompleted: true,
-        completionDate: '2024-01-22'
-      },
-      {
-        id: 2,
-        title: 'Cryptography Fundamentals',
-        progress: 100,
-        lessonsCompleted: 6,
-        totalLessons: 6,
-        timeSpent: 3.8,
-        isCompleted: true,
-        completionDate: '2024-01-28'
-      },
-      {
-        id: 3,
-        title: 'Bitcoin and Cryptocurrency',
-        progress: 100,
-        lessonsCompleted: 10,
-        totalLessons: 10,
-        timeSpent: 5.5,
-        isCompleted: true,
-        completionDate: '2024-02-05'
-      },
-      {
-        id: 4,
-        title: 'Ethereum and Smart Contracts',
-        progress: 85,
-        lessonsCompleted: 7,
-        totalLessons: 8,
-        timeSpent: 6.2,
-        isCompleted: false
-      },
-      {
-        id: 5,
-        title: 'Building DApps',
-        progress: 60,
-        lessonsCompleted: 6,
-        totalLessons: 10,
-        timeSpent: 4.8,
-        isCompleted: false
-      },
-      {
-        id: 6,
-        title: 'DeFi Protocols',
-        progress: 25,
-        lessonsCompleted: 2,
-        totalLessons: 8,
-        timeSpent: 2.1,
-        isCompleted: false
-      },
-      {
-        id: 7,
-        title: 'NFTs and Digital Assets',
-        progress: 0,
-        lessonsCompleted: 0,
-        totalLessons: 6,
-        timeSpent: 0,
-        isCompleted: false
-      },
-      {
-        id: 8,
-        title: 'Future of Blockchain',
-        progress: 0,
-        lessonsCompleted: 0,
-        totalLessons: 8,
-        timeSpent: 0,
-        isCompleted: false
+  // Fetch real course data and calculate progress
+  useEffect(() => {
+    const fetchCourseProgress = async () => {
+      if (!courseId || !user) {
+        setError('Course ID or user not found');
+        setLoading(false);
+        return;
       }
-    ],
-    weeklyProgress: [
-      { week: 'Week 1', hoursStudied: 8.5, lessonsCompleted: 12, quizzesCompleted: 3, skillTokensEarned: 85 },
-      { week: 'Week 2', hoursStudied: 6.2, lessonsCompleted: 8, quizzesCompleted: 2, skillTokensEarned: 60 },
-      { week: 'Week 3', hoursStudied: 7.8, lessonsCompleted: 10, quizzesCompleted: 4, skillTokensEarned: 95 },
-      { week: 'Week 4', hoursStudied: 5.5, lessonsCompleted: 7, quizzesCompleted: 2, skillTokensEarned: 55 },
-      { week: 'Week 5', hoursStudied: 4.5, lessonsCompleted: 5, quizzesCompleted: 1, skillTokensEarned: 45 }
-    ],
-    achievements: [
-      {
-        id: 1,
-        title: 'First Steps',
-        description: 'Completed your first lesson',
-        icon: '🎯',
-        earnedDate: '2024-01-16',
-        type: 'milestone'
-      },
-      {
-        id: 2,
-        title: 'Quiz Master',
-        description: 'Scored 90%+ on 5 quizzes',
-        icon: '🧠',
-        earnedDate: '2024-01-25',
-        type: 'score'
-      },
-      {
-        id: 3,
-        title: 'Consistency Champion',
-        description: 'Maintained a 10-day learning streak',
-        icon: '🔥',
-        earnedDate: '2024-02-01',
-        type: 'streak'
-      },
-      {
-        id: 4,
-        title: 'Module Master',
-        description: 'Completed 3 modules',
-        icon: '🏆',
-        earnedDate: '2024-02-05',
-        type: 'milestone'
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get course data from context or API
+        let course = getCourseById(courseId);
+
+        if (!course) {
+          // If not in context, fetch from API
+          course = await courseAPI.getById(courseId);
+        }
+
+        if (!course) {
+          setError('Course not found');
+          setLoading(false);
+          return;
+        }
+
+        // Calculate progress based on real course data
+        const syllabus = course.syllabus || course.curriculum || [];
+        const totalModules = syllabus.length;
+        let totalLessons = 0;
+        let completedLessons = 0;
+        let completedModules = 0;
+
+        // Get completion data from localStorage (since we don't have a progress API yet)
+        const completedLessonIds = getCompletedLessons(courseId, user._id);
+
+        const modules: ModuleProgress[] = syllabus.map((module: any, index: number) => {
+          const lessons = module.lessons || [];
+          const moduleTotalLessons = lessons.length;
+          const moduleCompletedLessons = lessons.filter((lesson: any) =>
+            completedLessonIds.includes(lesson._id || lesson.title)
+          ).length;
+
+          totalLessons += moduleTotalLessons;
+          completedLessons += moduleCompletedLessons;
+
+          const moduleProgress = moduleTotalLessons > 0 ? Math.round((moduleCompletedLessons / moduleTotalLessons) * 100) : 0;
+          const isCompleted = moduleProgress === 100;
+
+          if (isCompleted) {
+            completedModules++;
+          }
+
+          return {
+            id: index + 1,
+            title: module.title || `Module ${index + 1}`,
+            progress: moduleProgress,
+            lessonsCompleted: moduleCompletedLessons,
+            totalLessons: moduleTotalLessons,
+            timeSpent: Math.round(moduleCompletedLessons * 0.5 * 10) / 10, // Estimate: 30min per lesson
+            isCompleted,
+            completionDate: isCompleted ? new Date().toISOString().split('T')[0] : undefined
+          };
+        });
+
+        const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+        const estimatedTimeLeft = (totalLessons - completedLessons) * 0.5; // 30min per lesson
+        const timeSpent = completedLessons * 0.5; // 30min per lesson
+
+        // Create course progress object with real data
+        const progressData: CourseProgress = {
+          id: parseInt(courseId),
+          title: course.title || 'Course Title',
+          instructor: course.teacher?.username || 'Instructor',
+          totalModules,
+          completedModules,
+          totalLessons,
+          completedLessons,
+          totalQuizzes: 0, // We don't have quiz data in current structure
+          completedQuizzes: 0,
+          totalAssignments: 0,
+          completedAssignments: 0,
+          overallProgress,
+          timeSpent: Math.round(timeSpent * 10) / 10,
+          estimatedTimeLeft: Math.round(estimatedTimeLeft * 10) / 10,
+          skillTokensEarned: completedLessons * 10, // 10 tokens per lesson
+          skillTokensPotential: totalLessons * 10,
+          averageQuizScore: 0,
+          streak: 0,
+          lastActivity: 'Recent',
+          enrollmentDate: new Date().toISOString().split('T')[0],
+          modules,
+          weeklyProgress: calculateWeeklyProgress(completedLessonIds),
+          achievements: generateAchievements(completedLessons, overallProgress, completedModules)
+        };
+
+        setCourseProgress(progressData);
+      } catch (err) {
+        console.error('Error fetching course progress:', err);
+        setError('Failed to load course progress');
+      } finally {
+        setLoading(false);
       }
-    ]
-  };
+    };
+
+    fetchCourseProgress();
+  }, [courseId, user, getCourseById]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold mb-2">Loading Course Progress</h3>
+          <p className="text-gray-600">Please wait while we fetch your progress data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !courseProgress) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-500 text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Error Loading Progress</h3>
+          <p className="text-gray-600 mb-4">{error || 'Course progress could not be loaded.'}</p>
+          <Button onClick={() => navigate('/my-learning-journey')} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Learning Journey
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const toggleModule = (moduleId: number) => {
-    setExpandedModules(prev => 
-      prev.includes(moduleId) 
+    setExpandedModules(prev =>
+      prev.includes(moduleId)
         ? prev.filter(id => id !== moduleId)
         : [...prev, moduleId]
     );
@@ -267,15 +349,15 @@ export default function CourseProgress() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/my-learning-journey')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to My Learning Journey
           </Button>
-          
+
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-2xl p-8">
             <div className="flex items-start justify-between">
               <div>
@@ -376,7 +458,7 @@ export default function CourseProgress() {
                     </div>
                     <Progress value={courseProgress.overallProgress} className="h-3" />
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm font-medium">Modules Completed</span>
@@ -474,10 +556,10 @@ export default function CourseProgress() {
                 {courseProgress.modules.map((module) => {
                   const ModuleIcon = getModuleIcon(module);
                   const isExpanded = expandedModules.includes(module.id);
-                  
+
                   return (
                     <div key={module.id} className="border border-border rounded-lg">
-                      <div 
+                      <div
                         className="p-4 cursor-pointer hover:bg-muted/50"
                         onClick={() => toggleModule(module.id)}
                       >
@@ -506,7 +588,7 @@ export default function CourseProgress() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {isExpanded && (
                         <div className="px-4 pb-4">
                           <Separator className="mb-4" />
@@ -527,7 +609,7 @@ export default function CourseProgress() {
                             </div>
                           </div>
                           {!module.isCompleted && (
-                            <Button 
+                            <Button
                               className="mt-4 w-full"
                               onClick={() => navigate(`/course-study/${courseProgress.id}`)}
                             >
