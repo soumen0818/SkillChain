@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { walletService } from '@/lib/walletService';
+import { useToast } from '@/hooks/use-toast';
 import {
   Menu,
   X,
@@ -23,12 +25,78 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      try {
+        const walletAddress = await walletService.getCurrentWalletAddress();
+        setIsWalletConnected(!!walletAddress);
+        setCurrentWalletAddress(walletAddress || '');
+      } catch (error) {
+        setIsWalletConnected(false);
+        setCurrentWalletAddress('');
+      }
+    };
+
+    checkWalletConnection();
+
+    // Listen for account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', checkWalletConnection);
+      window.ethereum.on('disconnect', () => {
+        setIsWalletConnected(false);
+        setCurrentWalletAddress('');
+      });
+    }
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', checkWalletConnection);
+        window.ethereum.removeListener('disconnect', () => {
+          setIsWalletConnected(false);
+          setCurrentWalletAddress('');
+        });
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleWalletClick = async () => {
+    try {
+      // Always open MetaMask interface regardless of connection status
+      const walletInfo = await walletService.openWallet();
+
+      // Update our local state with current connection status
+      setIsWalletConnected(!!walletInfo.address);
+      setCurrentWalletAddress(walletInfo.address || '');
+
+      if (walletInfo.address) {
+        toast({
+          title: "Wallet Interface Opened",
+          description: `Connected to ${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)} with ${parseFloat(walletInfo.balance).toFixed(4)} ETH`,
+        });
+      } else {
+        toast({
+          title: "MetaMask Opened",
+          description: "MetaMask interface opened. Please connect your wallet.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to Open Wallet",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const getDashboardLink = () => {
@@ -99,11 +167,12 @@ export const Navbar = () => {
                       Settings
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/wallet" className="flex items-center">
+                  <DropdownMenuItem onClick={handleWalletClick} className="cursor-pointer">
+                    <div className="flex items-center">
                       <Wallet className="mr-2 h-4 w-4" />
-                      Wallet
-                    </Link>
+                      <span>Wallet</span>
+                      <div className={`ml-2 h-2 w-2 rounded-full ${isWalletConnected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -179,6 +248,17 @@ export const Navbar = () => {
                   >
                     Dashboard
                   </Link>
+                  <button
+                    onClick={() => {
+                      handleWalletClick();
+                      setIsOpen(false);
+                    }}
+                    className="flex items-center w-full text-left px-3 py-2 text-foreground hover:text-primary animate-smooth"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span>Wallet</span>
+                    <div className={`ml-2 h-2 w-2 rounded-full ${isWalletConnected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                  </button>
                   <button
                     onClick={() => {
                       handleLogout();
