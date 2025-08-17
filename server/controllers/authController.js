@@ -79,4 +79,61 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { signup, login };
+const updateProfile = async (req, res) => {
+  const { username, walletAddress, bio, teachingTitle } = req.body;
+
+  try {
+    // Check if username is taken by another user
+    if (username) {
+      const existingUser = await User.findOne({
+        username,
+        _id: { $ne: req.user._id }
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+    }
+
+    // Check if wallet address is taken by another user
+    if (walletAddress) {
+      const existingWallet = await User.findOne({
+        walletAddress,
+        _id: { $ne: req.user._id }
+      });
+      if (existingWallet) {
+        return res.status(400).json({ message: 'Wallet address is already registered' });
+      }
+    }
+
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (walletAddress) updateData.walletAddress = walletAddress;
+    if (bio !== undefined) updateData.bio = bio;
+    if (teachingTitle !== undefined) updateData.teachingTitle = teachingTitle;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (user) {
+      res.json({
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        walletAddress: user.walletAddress,
+        role: user.role,
+        bio: user.bio,
+        teachingTitle: user.teachingTitle,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { signup, login, updateProfile };

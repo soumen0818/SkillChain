@@ -75,7 +75,7 @@ const enrollCourse = async (req, res) => {
 
 const getCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ status: { $ne: 'draft' } }).populate('teacher', 'username email');
+    const courses = await Course.find({ status: { $ne: 'draft' } }).populate('teacher', 'username email walletAddress');
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -84,7 +84,7 @@ const getCourses = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find({}).populate('teacher', 'username email');
+    const courses = await Course.find({}).populate('teacher', 'username email walletAddress');
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -93,7 +93,7 @@ const getAllCourses = async (req, res) => {
 
 const getCourseById = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id).populate('teacher', 'username email');
+    const course = await Course.findById(req.params.id).populate('teacher', 'username email walletAddress');
     if (course) {
       res.json(course);
     } else {
@@ -121,7 +121,7 @@ const updateCourse = async (req, res) => {
       req.params.id,
       { ...req.body },
       { new: true, runValidators: true }
-    ).populate('teacher', 'username email');
+    ).populate('teacher', 'username email walletAddress');
 
     res.json(updatedCourse);
   } catch (error) {
@@ -131,7 +131,7 @@ const updateCourse = async (req, res) => {
 
 const getTeacherCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ teacher: req.user._id }).populate('teacher', 'username email');
+    const courses = await Course.find({ teacher: req.user._id }).populate('teacher', 'username email walletAddress');
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -164,7 +164,7 @@ const getEnrolledCourses = async (req, res) => {
       path: 'enrolledCourses',
       populate: {
         path: 'teacher',
-        select: 'username email'
+        select: 'username email walletAddress'
       }
     });
 
