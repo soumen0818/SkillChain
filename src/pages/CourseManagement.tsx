@@ -4,11 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCourses } from '@/contexts/CourseContext';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import {
   ChevronLeft,
   Edit,
   BarChart3,
@@ -39,7 +39,7 @@ export default function CourseManagement() {
   const { courseId } = useParams();
   const { getCourseById, loading } = useCourses();
   const { toast } = useToast();
-  
+
   const [course, setCourse] = useState(null);
   const [selectedModule, setSelectedModule] = useState(null);
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
@@ -55,7 +55,7 @@ export default function CourseManagement() {
           description: "The course you're trying to manage doesn't exist.",
           variant: "destructive"
         });
-        navigate('/teacher-dashboard');
+        navigate('/teacher/dashboard');
       }
     }
   }, [courseId, getCourseById, navigate, toast]);
@@ -122,10 +122,10 @@ export default function CourseManagement() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
-              onClick={() => navigate('/teacher-dashboard')}
+              onClick={() => navigate('/teacher/dashboard')}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
@@ -151,28 +151,28 @@ export default function CourseManagement() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button 
+              <Button
                 onClick={() => navigate(`/course-preview/${courseId}`)}
                 variant="outline"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate(`/edit-course/${courseId}`)}
                 variant="outline"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Course
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate(`/course-analytics/${courseId}`)}
                 variant="outline"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Analytics
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate(`/course-settings/${courseId}`)}
                 variant="outline"
               >
@@ -221,13 +221,12 @@ export default function CourseManagement() {
                 <p className="text-sm text-muted-foreground">Average Rating</p>
                 <div className="flex items-center mt-1">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <Star 
-                      key={star} 
-                      className={`w-3 h-3 ${
-                        star <= Math.floor(courseStats.avgRating) 
-                          ? 'text-yellow-500 fill-current' 
-                          : 'text-gray-300'
-                      }`} 
+                    <Star
+                      key={star}
+                      className={`w-3 h-3 ${star <= Math.floor(courseStats.avgRating)
+                        ? 'text-yellow-500 fill-current'
+                        : 'text-gray-300'
+                        }`}
                     />
                   ))}
                 </div>
@@ -284,8 +283,8 @@ export default function CourseManagement() {
                             </p>
                           </div>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleModuleClick(module)}
                           className="flex items-center space-x-2"
@@ -295,9 +294,9 @@ export default function CourseManagement() {
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
-                      
+
                       <p className="text-sm text-muted-foreground mb-4">{module.description}</p>
-                      
+
                       <div className="space-y-2">
                         {module.lessons?.slice(0, 3).map((lesson, lessonIndex) => {
                           const LessonIcon = getLessonIcon(lesson.type);
@@ -362,8 +361,8 @@ export default function CourseManagement() {
                         })}
                         {module.lessons?.length > 3 && (
                           <div className="text-center py-2">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleModuleClick(module)}
                               className="text-xs text-muted-foreground"
@@ -383,7 +382,7 @@ export default function CourseManagement() {
                   <p className="text-gray-600 mb-6">
                     Start building your course by adding modules and lessons.
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/upload-content')}
                     className="bg-indigo-600 hover:bg-indigo-700"
                   >
@@ -403,10 +402,9 @@ export default function CourseManagement() {
                 {courseStats.recentActivity.map((activity, index) => (
                   <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${
-                        activity.type === 'enrollment' ? 'bg-blue-100' :
+                      <div className={`p-2 rounded-full ${activity.type === 'enrollment' ? 'bg-blue-100' :
                         activity.type === 'completion' ? 'bg-green-100' : 'bg-yellow-100'
-                      }`}>
+                        }`}>
                         {activity.type === 'enrollment' && <Users className="w-4 h-4 text-blue-600" />}
                         {activity.type === 'completion' && <Award className="w-4 h-4 text-green-600" />}
                         {activity.type === 'review' && <Star className="w-4 h-4 text-yellow-600" />}
@@ -430,40 +428,40 @@ export default function CourseManagement() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
               <div className="space-y-3">
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => navigate('/upload-content')}
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Add Course Content
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => navigate(`/edit-course/${courseId}`)}
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Course Details
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => navigate(`/course-analytics/${courseId}`)}
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   View Analytics
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => navigate('/student-management')}
                 >
                   <Users className="w-4 h-4 mr-2" />
                   Manage Students
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => navigate(`/course-settings/${courseId}`)}
                 >
@@ -564,17 +562,20 @@ export default function CourseManagement() {
             <DialogHeader>
               <DialogTitle className="flex items-center space-x-2">
                 <BookOpen className="w-5 h-5" />
-                <span>Module Details: {selectedModule?.title}</span>
+                <span>Module Details: {selectedModule?.title || 'Loading...'}</span>
               </DialogTitle>
+              <DialogDescription>
+                View and manage the content and lessons for this course module.
+              </DialogDescription>
             </DialogHeader>
-            
-            {selectedModule && (
+
+            {selectedModule ? (
               <ScrollArea className="max-h-[60vh] pr-4">
                 <div className="space-y-6">
                   {/* Module Overview */}
                   <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg">
                     <h3 className="text-xl font-semibold mb-2">{selectedModule.title}</h3>
-                    <p className="text-gray-700 mb-4">{selectedModule.description}</p>
+                    <p className="text-gray-700 mb-4">{selectedModule.description || 'No description available'}</p>
                     <div className="flex items-center space-x-4">
                       <Badge variant="outline" className="flex items-center space-x-1">
                         <BookOpen className="w-3 h-3" />
@@ -595,7 +596,7 @@ export default function CourseManagement() {
                       <PlayCircle className="w-5 h-5 mr-2" />
                       Lessons in this Module
                     </h4>
-                    
+
                     {selectedModule.lessons && selectedModule.lessons.length > 0 ? (
                       <div className="space-y-4">
                         {selectedModule.lessons.map((lesson, index) => {
@@ -608,7 +609,7 @@ export default function CourseManagement() {
                                     <LessonIcon className="w-5 h-5 text-indigo-600" />
                                   </div>
                                 </div>
-                                
+
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-2">
                                     <h5 className="text-lg font-medium text-gray-900">
@@ -628,7 +629,7 @@ export default function CourseManagement() {
 
                                   {/* Lesson Content Info */}
                                   <div className="space-y-3">
-                                    {lesson.type === 'video' && lesson.videoUrl && (
+                                    {lesson.type === 'video' && (lesson.videoUrl || lesson.content) && (
                                       <div className="space-y-3">
                                         <div className="flex items-center space-x-2 text-sm text-gray-600">
                                           <Video className="w-4 h-4" />
@@ -640,22 +641,32 @@ export default function CourseManagement() {
                                             className="w-full h-80 object-cover"
                                             controls
                                             preload="metadata"
-                                            poster="/placeholder.svg"
                                             onLoadStart={() => {
-                                              // You can add loading state here if needed
+                                              console.log('Video started loading:', lesson.videoUrl);
+                                              console.log('Lesson content field:', lesson.content);
+                                            }}
+                                            onLoad={() => {
+                                              console.log('Video loaded successfully:', lesson.videoUrl);
+                                            }}
+                                            onCanPlay={() => {
+                                              console.log('Video can play:', lesson.videoUrl);
                                             }}
                                             onError={(e) => {
                                               console.error('Video failed to load:', e);
+                                              console.error('Video URL:', lesson.videoUrl);
+                                              console.error('Original content field:', lesson.content);
+                                              const videoElement = e.target as HTMLVideoElement;
+                                              console.error('Error details:', videoElement.error);
                                               toast({
                                                 title: "Video Error",
-                                                description: "Failed to load video content",
+                                                description: `Failed to load video: ${lesson.title}. URL: ${lesson.videoUrl || lesson.content || 'No URL'}`,
                                                 variant: "destructive"
                                               });
                                             }}
                                           >
-                                            <source src={lesson.videoUrl} type="video/mp4" />
-                                            <source src={lesson.videoUrl} type="video/webm" />
-                                            <source src={lesson.videoUrl} type="video/ogg" />
+                                            <source src={lesson.videoUrl || lesson.content} type="video/mp4" />
+                                            <source src={lesson.videoUrl || lesson.content} type="video/webm" />
+                                            <source src={lesson.videoUrl || lesson.content} type="video/ogg" />
                                             Your browser does not support the video tag.
                                           </video>
                                           {/* Video overlay with lesson info */}
@@ -664,19 +675,19 @@ export default function CourseManagement() {
                                           </div>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                          <Button 
-                                            variant="outline" 
+                                          <Button
+                                            variant="outline"
                                             size="sm"
-                                            onClick={() => window.open(lesson.videoUrl, '_blank')}
+                                            onClick={() => window.open(lesson.videoUrl || lesson.content, '_blank')}
                                           >
                                             <ExternalLink className="w-3 h-3 mr-1" />
                                             Open in New Tab
                                           </Button>
-                                          <Button 
-                                            variant="ghost" 
+                                          <Button
+                                            variant="ghost"
                                             size="sm"
                                             onClick={() => {
-                                              navigator.clipboard.writeText(lesson.videoUrl);
+                                              navigator.clipboard.writeText(lesson.videoUrl || lesson.content);
                                               toast({
                                                 title: "Link Copied",
                                                 description: "Video URL copied to clipboard",
@@ -688,14 +699,14 @@ export default function CourseManagement() {
                                         </div>
                                       </div>
                                     )}
-                                    
-                                    {lesson.type === 'document' && lesson.documentUrl && (
+
+                                    {lesson.type === 'document' && (lesson.documentUrl || lesson.content) && (
                                       <div className="space-y-3">
                                         <div className="flex items-center space-x-2 text-sm text-gray-600">
                                           <FileText className="w-4 h-4" />
                                           <span>Document content available</span>
                                           <Badge variant="outline" className="text-xs">
-                                            {getFileType(lesson.documentUrl)}
+                                            {getFileType(lesson.documentUrl || lesson.content)}
                                           </Badge>
                                         </div>
                                         {/* Document Viewer */}
@@ -706,20 +717,20 @@ export default function CourseManagement() {
                                               <span className="text-sm font-medium">Document Preview</span>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                              <Button 
-                                                variant="outline" 
+                                              <Button
+                                                variant="outline"
                                                 size="sm"
-                                                onClick={() => window.open(lesson.documentUrl, '_blank')}
+                                                onClick={() => window.open(lesson.documentUrl || lesson.content, '_blank')}
                                               >
                                                 <ExternalLink className="w-3 h-3 mr-1" />
                                                 Full Screen
                                               </Button>
-                                              <Button 
-                                                variant="outline" 
+                                              <Button
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={() => {
                                                   const link = document.createElement('a');
-                                                  link.href = lesson.documentUrl;
+                                                  link.href = lesson.documentUrl || lesson.content;
                                                   link.download = lesson.title || 'document';
                                                   link.click();
                                                 }}
@@ -729,9 +740,9 @@ export default function CourseManagement() {
                                               </Button>
                                             </div>
                                           </div>
-                                          {getFileType(lesson.documentUrl) === 'pdf' ? (
+                                          {getFileType(lesson.documentUrl || lesson.content) === 'pdf' ? (
                                             <iframe
-                                              src={lesson.documentUrl}
+                                              src={lesson.documentUrl || lesson.content}
                                               className="w-full h-80"
                                               title={lesson.title}
                                               style={{ border: 'none' }}
@@ -743,8 +754,8 @@ export default function CourseManagement() {
                                                 <p className="text-gray-600 mb-4">
                                                   Preview not available for this file type
                                                 </p>
-                                                <Button 
-                                                  onClick={() => window.open(lesson.documentUrl, '_blank')}
+                                                <Button
+                                                  onClick={() => window.open(lesson.documentUrl || lesson.content, '_blank')}
                                                   className="bg-indigo-600 hover:bg-indigo-700"
                                                 >
                                                   <Download className="w-4 h-4 mr-2" />
@@ -758,14 +769,14 @@ export default function CourseManagement() {
                                     )}
 
                                     {/* Fallback for other content types */}
-                                    {lesson.type === 'video' && !lesson.videoUrl && (
+                                    {lesson.type === 'video' && !lesson.videoUrl && !lesson.content && (
                                       <div className="flex items-center space-x-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
                                         <Video className="w-4 h-4" />
                                         <span>Video content not yet uploaded</span>
                                       </div>
                                     )}
 
-                                    {lesson.type === 'document' && !lesson.documentUrl && (
+                                    {lesson.type === 'document' && !lesson.documentUrl && !lesson.content && (
                                       <div className="flex items-center space-x-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
                                         <FileText className="w-4 h-4" />
                                         <span>Document content not yet uploaded</span>
@@ -775,8 +786,8 @@ export default function CourseManagement() {
                                     {lesson.content && (
                                       <div className="bg-gray-50 p-3 rounded-md">
                                         <p className="text-sm text-gray-700">
-                                          {lesson.content.length > 200 
-                                            ? `${lesson.content.substring(0, 200)}...` 
+                                          {lesson.content.length > 200
+                                            ? `${lesson.content.substring(0, 200)}...`
                                             : lesson.content
                                           }
                                         </p>
@@ -798,6 +809,11 @@ export default function CourseManagement() {
                   </div>
                 </div>
               </ScrollArea>
+            ) : (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-500">Loading module details...</p>
+              </div>
             )}
           </DialogContent>
         </Dialog>
