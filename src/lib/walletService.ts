@@ -33,6 +33,36 @@ export class WalletService {
         }
     }
 
+    async openWallet(): Promise<{ address: string; balance: string }> {
+        if (!window.ethereum) {
+            throw new Error('MetaMask or another Web3 wallet is required. Please install MetaMask.');
+        }
+
+        try {
+            // First ensure wallet is connected
+            const walletInfo = await this.connectWallet();
+
+            // Open MetaMask interface to show transaction history and wallet details
+            await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }]
+            });
+
+            // Alternative method to open MetaMask (works better in some cases)
+            if (window.ethereum.isMetaMask) {
+                // This will open the MetaMask popup
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+            }
+
+            return walletInfo;
+        } catch (error: any) {
+            if (error.code === 4001) {
+                throw new Error('Please connect to MetaMask to view your wallet.');
+            }
+            throw new Error(`Failed to open wallet: ${error.message}`);
+        }
+    }
+
     async payForCourse(coursePrice: string, recipientAddress?: string): Promise<string> {
         if (!this.provider || !this.signer) {
             throw new Error('Wallet not connected. Please connect your wallet first.');
@@ -80,6 +110,20 @@ export class WalletService {
 
     isConnected(): boolean {
         return this.provider !== null && this.signer !== null;
+    }
+
+    async getCurrentWalletAddress(): Promise<string | null> {
+        if (!window.ethereum) {
+            return null;
+        }
+
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            return accounts.length > 0 ? accounts[0] : null;
+        } catch (error) {
+            console.error('Failed to get current wallet address:', error);
+            return null;
+        }
     }
 
     async switchToMainnet(): Promise<void> {
