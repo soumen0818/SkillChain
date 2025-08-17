@@ -101,7 +101,7 @@ export default function Courses() {
         alert('Successfully enrolled in the free course!');
         const goToDashboard = confirm('Would you like to go to your student dashboard?');
         if (goToDashboard) {
-          window.location.href = '/student-dashboard';
+          window.location.href = '/student/dashboard';
         }
         return;
       }
@@ -128,8 +128,13 @@ export default function Courses() {
         return;
       }
 
-      // Step 5: Process payment
-      const txHash = await walletService.payForCourse(course.price);
+      // Step 5: Process payment - pass teacher's wallet address as recipient
+      const teacherWalletAddress = course.teacher?.walletAddress;
+      if (!teacherWalletAddress) {
+        throw new Error('Teacher wallet address not found');
+      }
+
+      const txHash = await walletService.payForCourse(course.price, teacherWalletAddress);
 
       // Step 6: Enroll after successful payment
       await enrollInCourse(courseId);
@@ -149,7 +154,7 @@ export default function Courses() {
       // Step 8: Ask if user wants to go to dashboard
       const goToDashboard = confirm('Would you like to go to your student dashboard to start learning?');
       if (goToDashboard) {
-        window.location.href = '/student-dashboard';
+        window.location.href = '/student/dashboard';
       }
 
     } catch (err: any) {
