@@ -45,7 +45,7 @@ export default function EditCourse() {
           description: "The course you're trying to edit doesn't exist.",
           variant: "destructive"
         });
-        navigate('/teacher-dashboard');
+        navigate('/teacher/dashboard');
       }
     }
   }, [courseId, getCourseById, navigate, toast]);
@@ -132,7 +132,7 @@ export default function EditCourse() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => navigate('/teacher-dashboard')}
+              onClick={() => navigate('/teacher/dashboard')}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
