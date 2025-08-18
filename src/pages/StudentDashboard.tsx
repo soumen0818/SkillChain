@@ -103,11 +103,71 @@ export default function StudentDashboard() {
     }
   }, [user]);
 
+  // Helper function to calculate real progress from localStorage
+  const calculateRealProgress = (course: any, userId: string) => {
+    const syllabus = course.syllabus || course.curriculum || [];
+    let totalLessons = 0;
+    let completedLessons = 0;
+
+    // Count total lessons from syllabus
+    syllabus.forEach((section: any) => {
+      const lessons = section.lessons || [];
+      totalLessons += lessons.length;
+    });
+
+    // Get completed lessons from localStorage
+    const completionKey = `course_completions_${course.id || course._id}_${userId}`;
+    const completedLessonIds = JSON.parse(localStorage.getItem(completionKey) || '[]');
+
+    // Count completed lessons
+    syllabus.forEach((section: any) => {
+      const lessons = section.lessons || [];
+      lessons.forEach((lesson: any) => {
+        if (completedLessonIds.includes(lesson._id || lesson.title)) {
+          completedLessons++;
+        }
+      });
+    });
+
+    const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+    // Debug log to help verify progress calculation
+    if (progress > 0) {
+      console.log(`📊 Course: ${course.title}, Progress: ${progress}%, Completed: ${completedLessons}/${totalLessons} lessons`);
+    }
+
+    return {
+      progress,
+      completedLessons,
+      totalLessons: totalLessons || 1, // Fallback to prevent division by zero
+    };
+  };
+
+  // Calculate learning streak from real data
+  const calculateLearningStreak = () => {
+    if (certificates.length === 0) return '0 days';
+
+    // Sort certificates by date
+    const sortedCerts = certificates.sort((a, b) =>
+      new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
+    );
+
+    // Simple streak calculation based on recent certificates
+    const now = new Date();
+    const lastCertDate = new Date(sortedCerts[0].issueDate);
+    const daysDiff = Math.floor((now.getTime() - lastCertDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysDiff <= 7) {
+      return `${Math.max(1, 7 - daysDiff)} days`;
+    }
+    return '0 days';
+  };
+
   const stats = [
     { icon: BookOpen, label: 'Courses Enrolled', value: (enrolledCourses?.length || 0).toString(), color: 'text-blue-600' },
     { icon: Trophy, label: 'Certificates Earned', value: certificates.length.toString(), color: 'text-green-600' },
     { icon: Coins, label: 'SkillTokens', value: certificates.reduce((total, cert) => total + cert.skillTokensAwarded, 0).toString(), color: 'text-primary' },
-    { icon: TrendingUp, label: 'Learning Streak', value: '18 days', color: 'text-purple-600' }
+    { icon: TrendingUp, label: 'Learning Streak', value: calculateLearningStreak(), color: 'text-purple-600' }
   ];
 
   // Filter active marketplace listings
@@ -189,27 +249,17 @@ export default function StudentDashboard() {
                     </div>
                   ) : (
                     enrolledCourses.slice(0, 2).map((course) => {
-                      // Determine if course should be completed
-                      const isFrontendCourse = course.category?.toLowerCase().includes('frontend') || 
-                                              course.title?.toLowerCase().includes('frontend') ||
-                                              course.title?.toLowerCase().includes('react') ||
-                                              course.title?.toLowerCase().includes('vue') ||
-                                              course.title?.toLowerCase().includes('angular');
-                      
-                      const isJavaScriptCourse = course.category?.toLowerCase().includes('javascript') ||
-                                                course.title?.toLowerCase().includes('javascript') ||
-                                                course.title?.toLowerCase().includes('js');
-                      
-                      const isCompleted = isFrontendCourse || isJavaScriptCourse;
-                      const completionPercentage = isCompleted ? 100 : course.completion;
-                      const moduleProgress = isCompleted ? (course.modules || 12) : Math.ceil((course.completion / 100) * (course.modules || 12));
+                      // Calculate real progress from localStorage
+                      const realProgress = user ? calculateRealProgress(course, user._id) : { progress: 0, completedLessons: 0, totalLessons: 1 };
+                      const completionPercentage = realProgress.progress;
+                      const moduleProgress = Math.ceil((completionPercentage / 100) * (course.modules || 12));
+                      const isCompleted = completionPercentage >= 100;
 
                       return (
-                        <div key={course.id} className={`flex items-center space-x-4 p-4 border rounded-lg hover:shadow-lg transition-all duration-300 animate-smooth ${
-                          isCompleted 
-                            ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100' 
-                            : 'border-border hover:bg-muted/50'
-                        }`}>
+                        <div key={course.id} className={`flex items-center space-x-4 p-4 border rounded-lg hover:shadow-lg transition-all duration-300 animate-smooth ${isCompleted
+                          ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100'
+                          : 'border-border hover:bg-muted/50'
+                          }`}>
                           <div className="relative">
                             <img
                               src={course.thumbnail}
@@ -217,17 +267,16 @@ export default function StudentDashboard() {
                               className="w-16 h-16 rounded-lg object-cover"
                             />
                             <div className="absolute -top-1 -right-1">
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
                                 course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                                course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                                course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                                course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                                course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
-                                course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
-                                course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
-                                'bg-pink-100 text-pink-800'
-                              }`}>
+                                  course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                    course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                      course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                        course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
+                                          course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
+                                            course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
+                                              'bg-pink-100 text-pink-800'
+                                }`}>
                                 {course.category}
                               </span>
                             </div>
@@ -256,17 +305,16 @@ export default function StudentDashboard() {
                             </p>
                             <div className="flex items-center space-x-2 mt-2">
                               <div className="flex-1 relative">
-                                <Progress 
-                                  value={completionPercentage} 
+                                <Progress
+                                  value={completionPercentage}
                                   className={`${isCompleted ? 'progress-complete' : ''}`}
                                 />
                                 {isCompleted && (
                                   <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30 animate-pulse"></div>
                                 )}
                               </div>
-                              <span className={`text-sm font-medium ${
-                                isCompleted ? 'text-green-600' : 'text-muted-foreground'
-                              }`}>
+                              <span className={`text-sm font-medium ${isCompleted ? 'text-green-600' : 'text-muted-foreground'
+                                }`}>
                                 {completionPercentage}%
                                 {isCompleted && <span className="ml-1">🎉</span>}
                               </span>
@@ -329,36 +377,47 @@ export default function StudentDashboard() {
               <Card className="p-6 hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1 transform transition-all duration-300 border-0 bg-gradient-to-br from-white to-green-50/30">
                 <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-4 hover:bg-green-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 group-hover:scale-110 transition-all duration-300">
-                      <Trophy className="w-5 h-5 text-green-600 group-hover:animate-bounce" />
+                  {certificates.length === 0 && enrolledCourses.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No recent activity</p>
+                      <p className="text-sm text-muted-foreground mt-2">Start learning to see your activity here!</p>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium group-hover:text-green-700 transition-colors duration-300">Certificate Earned</p>
-                      <p className="text-sm text-muted-foreground">NFT Art Creation - Advanced Level</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">2h ago</span>
-                  </div>
-                  <div className="flex items-center space-x-4 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center group-hover:bg-primary/30 group-hover:scale-110 transition-all duration-300">
-                      <Coins className="w-5 h-5 text-primary group-hover:animate-spin" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium group-hover:text-primary transition-colors duration-300">SkillTokens Earned</p>
-                      <p className="text-sm text-muted-foreground">+250 ST for completing module</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors duration-300">1d ago</span>
-                  </div>
-                  <div className="flex items-center space-x-4 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 group-hover:scale-110 transition-all duration-300">
-                      <BookOpen className="w-5 h-5 text-blue-600 group-hover:animate-pulse" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium group-hover:text-blue-700 transition-colors duration-300">New Course Enrolled</p>
-                      <p className="text-sm text-muted-foreground">Advanced Smart Contract Security</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">3d ago</span>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Show recent certificates */}
+                      {certificates.slice(0, 2).map((cert, index) => (
+                        <div key={cert._id} className="flex items-center space-x-4 hover:bg-green-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 group-hover:scale-110 transition-all duration-300">
+                            <Trophy className="w-5 h-5 text-green-600 group-hover:animate-bounce" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium group-hover:text-green-700 transition-colors duration-300">Certificate Earned</p>
+                            <p className="text-sm text-muted-foreground">{cert.courseName}</p>
+                          </div>
+                          <span className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">
+                            {Math.floor((Date.now() - new Date(cert.issueDate).getTime()) / (1000 * 60 * 60 * 24))}d ago
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Show recent enrollments */}
+                      {enrolledCourses.slice(0, 2 - certificates.length).map((course, index) => (
+                        <div key={course.id} className="flex items-center space-x-4 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 p-3 rounded-lg transform transition-all duration-300 cursor-pointer group">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 group-hover:scale-110 transition-all duration-300">
+                            <BookOpen className="w-5 h-5 text-blue-600 group-hover:animate-pulse" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium group-hover:text-blue-700 transition-colors duration-300">Course Enrolled</p>
+                            <p className="text-sm text-muted-foreground">{course.title}</p>
+                          </div>
+                          <span className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">
+                            {Math.floor((Date.now() - new Date().getTime()) / (1000 * 60 * 60 * 24)) || 1}d ago
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </Card>
             </div>
@@ -367,84 +426,65 @@ export default function StudentDashboard() {
             <Card className="p-6 hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1 transform transition-all duration-300 border-0 bg-gradient-to-br from-white to-purple-50/30">
               <h3 className="text-xl font-semibold mb-6">Learning Progress by Category</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2 group hover:bg-blue-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-blue-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      Blockchain Development
-                    </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">75%</span>
+                {enrolledCourses.length === 0 ? (
+                  <div className="col-span-full text-center py-8">
+                    <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No progress data available</p>
+                    <p className="text-sm text-muted-foreground mt-2">Enroll in courses to track your progress by category!</p>
                   </div>
-                  <Progress value={75} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Smart Contracts, DeFi, Consensus</p>
-                </div>
-                <div className="space-y-2 group hover:bg-green-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300 animate-pulse"></span>
-                      Frontend Development
-                    </span>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm text-green-600 font-bold group-hover:text-green-700 transition-colors duration-300">100%</span>
-                      <Trophy className="w-4 h-4 text-yellow-500" />
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <Progress value={100} className="group-hover:scale-105 transition-transform duration-300 progress-complete" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30 animate-pulse"></div>
-                  </div>
-                  <p className="text-xs text-green-600 font-medium group-hover:text-green-700 transition-colors duration-300">React, HTML5, CSS3, Responsive Design ✅</p>
-                </div>
-                <div className="space-y-2 group hover:bg-yellow-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300 animate-pulse"></span>
-                      JavaScript Development
-                    </span>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm text-yellow-600 font-bold group-hover:text-yellow-700 transition-colors duration-300">100%</span>
-                      <Trophy className="w-4 h-4 text-yellow-500" />
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <Progress value={100} className="group-hover:scale-105 transition-transform duration-300 progress-complete" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full opacity-30 animate-pulse"></div>
-                  </div>
-                  <p className="text-xs text-yellow-600 font-medium group-hover:text-yellow-700 transition-colors duration-300">ES6+, DOM, Async, Modern JS ✅</p>
-                </div>
-                <div className="space-y-2 group hover:bg-orange-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-orange-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      Backend Development
-                    </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">45%</span>
-                  </div>
-                  <Progress value={45} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-orange-600 transition-colors duration-300">Node.js, APIs, Databases</p>
-                </div>
-                <div className="space-y-2 group hover:bg-red-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      Trading & Analytics
-                    </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-red-600 transition-colors duration-300">60%</span>
-                  </div>
-                  <Progress value={60} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-red-600 transition-colors duration-300">Technical Analysis, Risk Management</p>
-                </div>
-                <div className="space-y-2 group hover:bg-pink-50 hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="w-3 h-3 bg-pink-500 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300"></span>
-                      Metaverse Development
-                    </span>
-                    <span className="text-sm text-muted-foreground group-hover:text-pink-600 transition-colors duration-300">85%</span>
-                  </div>
-                  <Progress value={85} className="group-hover:scale-105 transition-transform duration-300" />
-                  <p className="text-xs text-muted-foreground group-hover:text-pink-600 transition-colors duration-300">3D Modeling, VR/AR, Virtual Worlds</p>
-                </div>
+                ) : (
+                  // Group courses by category and calculate progress
+                  Object.entries(
+                    enrolledCourses.reduce((acc, course) => {
+                      const category = course.category || 'Other';
+                      if (!acc[category]) {
+                        acc[category] = { courses: [], totalProgress: 0, completedCourses: 0 };
+                      }
+
+                      // Calculate real progress for this course
+                      const realProgress = user ? calculateRealProgress(course, user._id) : { progress: 0, completedLessons: 0, totalLessons: 1 };
+                      const courseProgress = realProgress.progress;
+
+                      acc[category].courses.push(course);
+                      acc[category].totalProgress += courseProgress;
+                      if (courseProgress >= 100) {
+                        acc[category].completedCourses += 1;
+                      }
+                      return acc;
+                    }, {} as Record<string, { courses: any[], totalProgress: number, completedCourses: number }>)
+                  ).map(([category, data]) => {
+                    const avgProgress = Math.round(data.totalProgress / data.courses.length);
+                    const isCompleted = data.completedCourses === data.courses.length;
+
+                    return (
+                      <div key={category} className={`space-y-2 group hover:shadow-lg hover:-translate-y-1 p-4 rounded-lg transform transition-all duration-300 cursor-pointer ${isCompleted ? 'border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100' : 'hover:bg-gray-50'
+                        }`}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium flex items-center">
+                            <span className={`w-3 h-3 rounded-full mr-2 group-hover:scale-125 transition-transform duration-300 ${isCompleted ? 'animate-pulse bg-green-500' : 'bg-blue-500'}`}></span>
+                            {category.charAt(0).toUpperCase() + category.slice(1)} Development
+                          </span>
+                          <div className="flex items-center space-x-1">
+                            <span className={`text-sm transition-colors duration-300 ${isCompleted ? 'text-green-600 font-bold' : 'text-muted-foreground group-hover:text-blue-600'}`}>
+                              {avgProgress}%
+                            </span>
+                            {isCompleted && <Trophy className="w-4 h-4 text-yellow-500" />}
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <Progress value={avgProgress} className={`group-hover:scale-105 transition-transform duration-300 ${isCompleted ? 'progress-complete' : ''}`} />
+                          {isCompleted && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-500 rounded-full opacity-30 animate-pulse"></div>
+                          )}
+                        </div>
+                        <p className={`text-xs transition-colors duration-300 ${isCompleted ? 'text-green-600 font-medium' : 'text-muted-foreground group-hover:text-blue-600'}`}>
+                          {data.courses.length} course{data.courses.length !== 1 ? 's' : ''} • {data.completedCourses} completed
+                          {isCompleted && <span className="ml-2">✅</span>}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </Card>
           </TabsContent>
@@ -478,26 +518,16 @@ export default function StudentDashboard() {
                   </Button>
                 </div>
               ) : (
-                enrolledCourses.slice(0, 6).map((course) => {
-                  // Determine if course should be completed
-                  const isFrontendCourse = course.category?.toLowerCase().includes('frontend') || 
-                                          course.title?.toLowerCase().includes('frontend') ||
-                                          course.title?.toLowerCase().includes('react') ||
-                                          course.title?.toLowerCase().includes('vue') ||
-                                          course.title?.toLowerCase().includes('angular');
-                  
-                  const isJavaScriptCourse = course.category?.toLowerCase().includes('javascript') ||
-                                            course.title?.toLowerCase().includes('javascript') ||
-                                            course.title?.toLowerCase().includes('js');
-                  
-                  const isCompleted = isFrontendCourse || isJavaScriptCourse;
-                  const completionPercentage = isCompleted ? 100 : course.completion;
-                  const moduleProgress = isCompleted ? (course.modules || 12) : Math.ceil((course.completion / 100) * (course.modules || 12));
+                enrolledCourses.map((course) => {
+                  // Calculate real progress from localStorage
+                  const realProgress = user ? calculateRealProgress(course, user._id) : { progress: 0, completedLessons: 0, totalLessons: 1 };
+                  const completionPercentage = realProgress.progress;
+                  const moduleProgress = Math.ceil((completionPercentage / 100) * (course.modules || 12));
+                  const isCompleted = completionPercentage >= 100;
 
                   return (
-                    <Card key={course.id} className={`overflow-hidden hover:shadow-elevation animate-smooth transition-all duration-300 ${
-                      isCompleted ? 'ring-2 ring-green-200 shadow-lg' : ''
-                    }`}>
+                    <Card key={course.id} className={`overflow-hidden hover:shadow-elevation animate-smooth transition-all duration-300 ${isCompleted ? 'ring-2 ring-green-200 shadow-lg' : ''
+                      }`}>
                       <div className="relative">
                         <img
                           src={course.thumbnail}
@@ -505,17 +535,16 @@ export default function StudentDashboard() {
                           className="w-full h-48 object-cover"
                         />
                         <div className="absolute top-4 right-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.category === 'blockchain' ? 'bg-blue-100 text-blue-800' :
                             course.category === 'web3' ? 'bg-green-100 text-green-800' :
-                            course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
-                            course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
-                            course.category === 'trading' ? 'bg-red-100 text-red-800' :
-                            course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
-                            course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
-                            course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
-                            'bg-pink-100 text-pink-800'
-                          }`}>
+                              course.category === 'nft' ? 'bg-purple-100 text-purple-800' :
+                                course.category === 'defi' ? 'bg-orange-100 text-orange-800' :
+                                  course.category === 'trading' ? 'bg-red-100 text-red-800' :
+                                    course.category === 'frontend' ? 'bg-blue-100 text-blue-800' :
+                                      course.category === 'javascript' ? 'bg-yellow-100 text-yellow-800' :
+                                        course.category === 'backend' ? 'bg-gray-100 text-gray-800' :
+                                          'bg-pink-100 text-pink-800'
+                            }`}>
                             {course.category.toUpperCase()}
                           </span>
                         </div>
@@ -540,18 +569,17 @@ export default function StudentDashboard() {
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center space-x-2">
                               <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span>{course.duration}</span>
+                              <span>{course.duration || 'Self-paced'}</span>
                             </div>
-                            <span className={`font-medium ${
-                              isCompleted ? 'text-green-600' : 'text-primary'
-                            }`}>
+                            <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-primary'
+                              }`}>
                               {completionPercentage}% complete
                               {isCompleted && <span className="ml-1">🎉</span>}
                             </span>
                           </div>
                           <div className="relative">
-                            <Progress 
-                              value={completionPercentage} 
+                            <Progress
+                              value={completionPercentage}
                               className={`${isCompleted ? 'progress-complete' : ''}`}
                             />
                             {isCompleted && (
@@ -570,7 +598,7 @@ export default function StudentDashboard() {
                           <div className="space-y-2">
                             <p className="text-sm font-medium">Status:</p>
                             <p className="text-sm text-muted-foreground">
-                              {isCompleted ? 'Course Completed! Ready for certificate' : 'Continue Learning'}
+                              {isCompleted ? 'Course Completed! Ready for certificate' : `${completionPercentage}% completed - Continue Learning`}
                             </p>
                           </div>
 
@@ -584,7 +612,7 @@ export default function StudentDashboard() {
                                 {course.level}
                               </span>
                               <span className="text-xs bg-muted px-2 py-1 rounded">
-                                {course.skillTokenReward} ST
+                                {course.skillTokenReward || 100} ST
                               </span>
                               {isCompleted && (
                                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center">
@@ -679,8 +707,8 @@ export default function StudentDashboard() {
                         <div className="flex flex-col items-end space-y-1">
                           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">NFT</span>
                           <span className={`text-xs px-2 py-1 rounded capitalize ${cert.certificateType === 'mastery' ? 'bg-purple-100 text-purple-800' :
-                              cert.certificateType === 'excellence' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
+                            cert.certificateType === 'excellence' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-blue-100 text-blue-800'
                             }`}>
                             {cert.certificateType}
                           </span>
