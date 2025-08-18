@@ -33,6 +33,52 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import '../styles/course-study-animations.css';
 
+// Helper functions for real progress calculation
+const getCompletedLessonsForCourse = (courseId: string, userId: string) => {
+  const completionKey = `course_completions_${courseId}_${userId}`;
+  return JSON.parse(localStorage.getItem(completionKey) || '[]');
+};
+
+const calculateRealProgress = (course: any, userId: string) => {
+  const syllabus = course.syllabus || course.curriculum || [];
+  let totalLessons = 0;
+  let completedLessons = 0;
+
+  // Count total lessons from syllabus
+  syllabus.forEach((section: any) => {
+    const lessons = section.lessons || [];
+    totalLessons += lessons.length;
+  });
+
+  // Get completed lessons from localStorage
+  const completedLessonIds = getCompletedLessonsForCourse(course._id, userId);
+
+  // Count completed lessons
+  syllabus.forEach((section: any) => {
+    const lessons = section.lessons || [];
+    lessons.forEach((lesson: any) => {
+      if (completedLessonIds.includes(lesson._id || lesson.title)) {
+        completedLessons++;
+      }
+    });
+  });
+
+  const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const isCompleted = progress === 100;
+
+  return {
+    progress,
+    status: isCompleted ? 'completed' : (progress > 0 ? 'active' : 'active'),
+    completedLessons,
+    totalLessons: totalLessons || 1, // Fallback to prevent division by zero
+    timeSpent: `${(completedLessons * 0.5).toFixed(1)} hours`, // 30min per lesson
+    estimatedTimeLeft: `${((totalLessons - completedLessons) * 0.5).toFixed(1)} hours`,
+    nextLesson: isCompleted ? 'Course Completed!' : 'Continue Learning',
+    skillTokensEarned: completedLessons * 10, // 10 tokens per lesson
+    certificateEligible: isCompleted
+  };
+};
+
 interface Course {
   _id: string;
   title: string;
@@ -72,56 +118,29 @@ export default function MyLearningJourney() {
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const courses = await courseAPI.getEnrolledCourses();
 
-        // Simulate progress and other student-specific data with only Frontend courses at 100%
-        const coursesWithProgress = courses.map((course: any) => {
-          const isFrontendCourse = course.category?.toLowerCase().includes('frontend') || 
-                                  course.title?.toLowerCase().includes('frontend') ||
-                                  course.title?.toLowerCase().includes('react') ||
-                                  course.title?.toLowerCase().includes('vue') ||
-                                  course.title?.toLowerCase().includes('angular');
-          
-          const isJavaScriptCourse = course.category?.toLowerCase().includes('javascript') ||
-                                    course.title?.toLowerCase().includes('javascript') ||
-                                    course.title?.toLowerCase().includes('js');
-          
-          const isBackendCourse = course.category?.toLowerCase().includes('backend') ||
-                                 course.title?.toLowerCase().includes('backend') ||
-                                 course.title?.toLowerCase().includes('node') ||
-                                 course.title?.toLowerCase().includes('server');
-          
-          // Only frontend courses are complete (100%), JavaScript and Backend are in progress (30-70%)
-          let progress;
-          if (isFrontendCourse) {
-            progress = 100;
-          } else if (isJavaScriptCourse || isBackendCourse) {
-            progress = Math.floor(Math.random() * 40) + 30; // 30-70% progress
-          } else {
-            progress = Math.floor(Math.random() * 95) + 1; // Other courses 1-95%
-          }
-          
-          const status = progress === 100 ? 'completed' : 'active'; // Set JavaScript and Backend as active
-          const completedLessons = progress === 100 ? course.totalLessons || 12 : Math.floor((progress / 100) * (course.totalLessons || 12));
-          const skillTokensEarned = progress === 100 ? parseInt(course.skillTokenReward || '100') : Math.floor((progress / 100) * parseInt(course.skillTokenReward || '100'));
-          
+        // Calculate real progress for each course
+        const coursesWithRealProgress = courses.map((course: any) => {
+          const realProgressData = calculateRealProgress(course, user._id);
+
           return {
             ...course,
-            progress,
-            status,
-            timeSpent: progress === 100 ? `${(15 + Math.random() * 10).toFixed(1)} hours` : `${(Math.random() * 15).toFixed(1)} hours`,
-            estimatedTimeLeft: progress === 100 ? '0 hours' : `${((100 - progress) / 10).toFixed(1)} hours`,
-            completedLessons,
-            totalLessons: course.totalLessons || 12,
-            nextLesson: progress === 100 ? 'Course Completed!' : 'Next up: Introduction',
-            skillTokensEarned,
-            certificateEligible: progress === 100,
+            ...realProgressData,
+            rating: course.rating || 0,
+            duration: course.duration || `${realProgressData.totalLessons * 0.5} hours`,
+            thumbnail: course.thumbnail || '/placeholder.svg'
           };
         });
 
-        setEnrolledCourses(coursesWithProgress);
+        setEnrolledCourses(coursesWithRealProgress);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch enrolled courses.');
@@ -131,9 +150,7 @@ export default function MyLearningJourney() {
       }
     };
 
-    if (user) {
-      fetchEnrolledCourses();
-    }
+    fetchEnrolledCourses();
   }, [user]);
 
   const getFilteredCourses = () => {
@@ -385,7 +402,7 @@ export default function MyLearningJourney() {
                   <Card key={course._id} className="p-6 shadow-lg border-0 hover:shadow-xl transition-all duration-300">
                     <div className="flex items-start space-x-6">
                       <img
-                        src={course.thumbnail || 'https://via.placeholder.com/300x200'}
+                        src={course.thumbnail || '/placeholder.svg'}
                         alt={course.title}
                         className="w-32 h-24 rounded-lg object-cover"
                       />
@@ -428,11 +445,10 @@ export default function MyLearningJourney() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className={`text-2xl font-bold mb-1 ${
-                              course.progress === 100 
-                                ? 'text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-500' 
+                            <div className={`text-2xl font-bold mb-1 ${course.progress === 100
+                                ? 'text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-500'
                                 : 'text-primary'
-                            }`}>
+                              }`}>
                               {course.progress}%
                             </div>
                             <div className="text-sm text-muted-foreground flex items-center justify-center">
@@ -458,21 +474,19 @@ export default function MyLearningJourney() {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="font-medium">Course Progress</span>
-                              <span className={`font-semibold ${
-                                course.progress === 100 ? 'text-green-600' : 'text-gray-600'
-                              }`}>
+                              <span className={`font-semibold ${course.progress === 100 ? 'text-green-600' : 'text-gray-600'
+                                }`}>
                                 {course.completedLessons}/{course.totalLessons} lessons
                                 {course.progress === 100 && ' ✅'}
                               </span>
                             </div>
                             <div className="relative">
-                              <Progress 
-                                value={course.progress} 
-                                className={`h-3 ${
-                                  course.progress === 100 
-                                    ? 'progress-complete' 
+                              <Progress
+                                value={course.progress}
+                                className={`h-3 ${course.progress === 100
+                                    ? 'progress-complete'
                                     : ''
-                                }`} 
+                                  }`}
                               />
                               {course.progress === 100 && (
                                 <div className="absolute inset-0 h-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse"></div>
@@ -481,18 +495,16 @@ export default function MyLearningJourney() {
                           </div>
 
                           <div className="grid md:grid-cols-4 gap-6 text-sm">
-                            <div className={`p-3 rounded-lg ${
-                              course.progress === 100 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-                            }`}>
+                            <div className={`p-3 rounded-lg ${course.progress === 100 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
+                              }`}>
                               <div className="text-muted-foreground flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
                                 Time Spent
                               </div>
                               <div className="font-semibold text-gray-800">{course.timeSpent}</div>
                             </div>
-                            <div className={`p-3 rounded-lg ${
-                              course.progress === 100 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-                            }`}>
+                            <div className={`p-3 rounded-lg ${course.progress === 100 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
+                              }`}>
                               <div className="text-muted-foreground flex items-center">
                                 <Target className="w-3 h-3 mr-1" />
                                 {course.progress === 100 ? 'Completed' : 'Time Left'}
@@ -501,9 +513,8 @@ export default function MyLearningJourney() {
                                 {course.progress === 100 ? '🎉 Done!' : course.estimatedTimeLeft}
                               </div>
                             </div>
-                            <div className={`p-3 rounded-lg ${
-                              course.progress === 100 ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'
-                            }`}>
+                            <div className={`p-3 rounded-lg ${course.progress === 100 ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'
+                              }`}>
                               <div className="text-muted-foreground flex items-center">
                                 <Coins className="w-3 h-3 mr-1" />
                                 SkillTokens
@@ -514,9 +525,8 @@ export default function MyLearningJourney() {
                                 {course.progress === 100 && <span className="ml-1">🏆</span>}
                               </div>
                             </div>
-                            <div className={`p-3 rounded-lg ${
-                              course.progress === 100 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
-                            }`}>
+                            <div className={`p-3 rounded-lg ${course.progress === 100 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+                              }`}>
                               <div className="text-muted-foreground flex items-center">
                                 <BookOpen className="w-3 h-3 mr-1" />
                                 Status
