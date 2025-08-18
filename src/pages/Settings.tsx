@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { useAuth, User as UserType } from '@/contexts/AuthContext';
+import { walletService } from '@/lib/walletService';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -51,13 +52,13 @@ interface PreferenceState {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const role = user?.role || 'student';
 
   const [prefs, setPrefs] = useState<PreferenceState>({
     username: user?.username || '',
     email: user?.email || '',
-    bio: '',
+    bio: user?.bio || '',
     locale: 'en',
     darkMode: false,
     marketingEmails: false,
@@ -68,7 +69,7 @@ export default function SettingsPage() {
     preferredPace: 'standard',
     autoEnrollRecommendations: false,
     showPublicAchievements: true,
-    teachingTitle: 'Senior Blockchain Instructor',
+    teachingTitle: user?.teachingTitle || 'Senior Blockchain Instructor',
     payoutWallet: user?.walletAddress || '',
     autoApproveEnrollments: true,
     defaultCertificateTemplate: 'modern-gradient',
@@ -76,14 +77,173 @@ export default function SettingsPage() {
     allowCourseForking: false
   });
 
-  const update = (k: keyof PreferenceState, v: any) => setPrefs(p => ({ ...p, [k]: v }));
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
 
-  const handleSave = () => {
-    // Placeholder – could persist to backend
-    toast({
-      title: 'Settings Saved',
-      description: 'Your preferences have been updated successfully.'
+  // Helper function to check if wallet is connected
+  const isWalletConnected = () => {
+    return currentWalletAddress && currentWalletAddress.trim() !== '';
+  };
+
+  const getWalletAddress = () => {
+    return currentWalletAddress || 'No wallet connected';
+  };
+
+  // Load saved preferences from localStorage
+  useEffect(() => {
+    const savedPrefs = localStorage.getItem('skillchain_user_preferences');
+    if (savedPrefs && user) {
+      try {
+        const parsed = JSON.parse(savedPrefs);
+        setPrefs(prev => ({
+          ...prev,
+          ...parsed,
+          username: user.username || '',
+          email: user.email || '',
+          bio: user.bio || parsed.bio || '',
+          teachingTitle: user.teachingTitle || parsed.teachingTitle || 'Senior Blockchain Instructor',
+          payoutWallet: user.walletAddress || parsed.payoutWallet || '',
+        }));
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+      }
+    }
+
+    // Get current MetaMask wallet address
+    const getCurrentWallet = async () => {
+      try {
+        const address = await walletService.getCurrentWalletAddress();
+        setCurrentWalletAddress(address || '');
+      } catch (error) {
+        console.error('Failed to get current wallet:', error);
+      }
+    };
+
+    getCurrentWallet();
+  }, [user]);
+
+  const update = (k: keyof PreferenceState, v: any) => {
+    setPrefs(p => {
+      const newPrefs = { ...p, [k]: v };
+      // Save non-sensitive preferences to localStorage
+      const { username, email, ...prefsToSave } = newPrefs;
+      localStorage.setItem('skillchain_user_preferences', JSON.stringify(prefsToSave));
+      return newPrefs;
     });
+  };
+
+  const handleConnectWallet = async () => {
+    try {
+      const walletInfo = await walletService.connectWallet();
+      update('payoutWallet', walletInfo.address);
+      toast({
+        title: "Wallet Connected Successfully",
+        description: `Connected to ${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)} with ${parseFloat(walletInfo.balance).toFixed(4)} ETH`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to Connect Wallet",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenWallet = async () => {
+    try {
+      await walletService.openWallet();
+      toast({
+        title: "Wallet Opened",
+        description: "MetaMask wallet interface opened successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to Open Wallet",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisconnectWallet = async () => {
+    try {
+      // Clear wallet address from preferences and user profile
+      update('payoutWallet', '');
+
+      // Update user profile to remove wallet address
+      const profileData: Partial<UserType> = {
+        walletAddress: '',
+      };
+
+      await updateProfile(profileData);
+
+      toast({
+        title: "Wallet Disconnected",
+        description: "Your wallet has been successfully disconnected from your account.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to Disconnect Wallet",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleWalletClick = () => {
+    if (prefs.payoutWallet || user?.walletAddress) {
+      handleOpenWallet();
+    } else {
+      handleConnectWallet();
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const profileData: Partial<UserType> = {
+        username: prefs.username.trim(),
+        bio: prefs.bio.trim(),
+        walletAddress: prefs.payoutWallet.trim(),
+      };
+
+      if (role === 'teacher') {
+        profileData.teachingTitle = prefs.teachingTitle?.trim();
+      }
+
+      // Validate required fields
+      if (!profileData.username) {
+        toast({
+          title: 'Validation Error',
+          description: 'Username is required.',
+          variant: 'destructive'
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      const success = await updateProfile(profileData);
+      if (success) {
+        toast({
+          title: 'Settings Saved Successfully',
+          description: 'Your profile has been updated and changes are now visible across the application.'
+        });
+      } else {
+        toast({
+          title: 'Save Failed',
+          description: 'Failed to update your settings. Please check your internet connection and try again.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Save Failed',
+        description: error.message || 'An unexpected error occurred. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const SectionHeader = ({ icon: Icon, title, desc }: { icon: any; title: string; desc?: string }) => (
@@ -217,15 +377,45 @@ export default function SettingsPage() {
       <Card className="p-6 border-0 bg-white/70 backdrop-blur-md shadow-elevation">
         <SectionHeader icon={Wallet} title="Monetization & Payouts" desc="Manage revenue channels & financial preferences." />
         <div className="grid md:grid-cols-2 gap-6">
-            <Field label="Payout Wallet" hint="Updates will require re-verification.">
-              <Input value={prefs.payoutWallet} onChange={e => update('payoutWallet', e.target.value)} placeholder="0x..." />
-            </Field>
-            <Field label="Revenue Email Digest" hint="Weekly performance summary.">
-              <div className="flex items-center justify-between h-10 px-3 rounded-md border bg-background/30">
-                <span className="text-sm text-muted-foreground">{prefs.revenueEmailDigest ? 'Enabled' : 'Disabled'}</span>
-                <Switch checked={prefs.revenueEmailDigest} onCheckedChange={() => update('revenueEmailDigest', !prefs.revenueEmailDigest)} />
+          <Field label="Payout Wallet" hint="Updates will require re-verification.">
+            <div className="flex gap-2">
+              <Input
+                value={prefs.payoutWallet}
+                onChange={e => update('payoutWallet', e.target.value)}
+                placeholder="0x..."
+                className="flex-1"
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleWalletClick}
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                >
+                  <div className="flex items-center">
+                    <Wallet className="h-4 w-4 mr-1" />
+                    <span>{(prefs.payoutWallet || user?.walletAddress) ? 'Open' : 'Connect'}</span>
+                  </div>
+                </Button>
+                {(prefs.payoutWallet || user?.walletAddress) && (
+                  <Button
+                    onClick={handleDisconnectWallet}
+                    variant="destructive"
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    Disconnect
+                  </Button>
+                )}
               </div>
-            </Field>
+            </div>
+          </Field>
+          <Field label="Revenue Email Digest" hint="Weekly performance summary.">
+            <div className="flex items-center justify-between h-10 px-3 rounded-md border bg-background/30">
+              <span className="text-sm text-muted-foreground">{prefs.revenueEmailDigest ? 'Enabled' : 'Disabled'}</span>
+              <Switch checked={prefs.revenueEmailDigest} onCheckedChange={() => update('revenueEmailDigest', !prefs.revenueEmailDigest)} />
+            </div>
+          </Field>
         </div>
       </Card>
 
@@ -249,11 +439,22 @@ export default function SettingsPage() {
             <p className="text-muted-foreground mt-2 max-w-prose">Tailor your SkillChain experience. These settings adapt to your role as a {role}.</p>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={() => handleSave()} className="gap-2">
-              <Save className="w-4 h-4" /> Quick Save
+            <Button
+              variant="outline"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving...' : 'Quick Save'}
             </Button>
-            <Button onClick={() => handleSave()} className="gradient-primary gap-2">
-              <SettingsIcon className="w-4 h-4" /> Apply Changes
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="gradient-primary gap-2"
+            >
+              <SettingsIcon className="w-4 h-4" />
+              {isSaving ? 'Applying...' : 'Apply Changes'}
             </Button>
           </div>
         </div>
@@ -315,7 +516,37 @@ export default function SettingsPage() {
                       </Select>
                     </Field>
                     <Field label="Payout Wallet">
-                      <Input value={prefs.payoutWallet} onChange={e => update('payoutWallet', e.target.value)} placeholder="0x..." />
+                      <div className="flex gap-2">
+                        <Input
+                          value={prefs.payoutWallet}
+                          onChange={e => update('payoutWallet', e.target.value)}
+                          placeholder="0x..."
+                          className="flex-1"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleWalletClick}
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                          >
+                            <div className="flex items-center">
+                              <Wallet className="h-4 w-4 mr-1" />
+                              <span>{(prefs.payoutWallet || user?.walletAddress) ? 'Open' : 'Connect'}</span>
+                            </div>
+                          </Button>
+                          {(prefs.payoutWallet || user?.walletAddress) && (
+                            <Button
+                              onClick={handleDisconnectWallet}
+                              variant="destructive"
+                              size="sm"
+                              className="shrink-0"
+                            >
+                              Disconnect
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </Field>
                   </div>
                 </Card>
@@ -356,9 +587,43 @@ export default function SettingsPage() {
               <Card className="p-6 border-0 bg-white/70 backdrop-blur-md shadow-elevation">
                 <SectionHeader icon={Wallet} title="Wallet & Identity" desc="Manage your linked blockchain wallet & usage preferences." />
                 <div className="grid md:grid-cols-2 gap-6">
-                  <Field label="Primary Wallet Address" hint="Used for on-chain certificate ownership & marketplace sales.">
-                    <Input value={prefs.payoutWallet || user?.walletAddress || ''} onChange={e => update('payoutWallet', e.target.value)} placeholder="0x..." />
+                  <Field label="Primary Wallet Address" hint="This shows your currently connected MetaMask wallet address.">
+                    <div className="flex gap-2">
+                      <Input
+                        value={getWalletAddress()}
+                        placeholder="No wallet connected"
+                        readOnly
+                        className="flex-1 font-mono text-sm bg-muted/50"
+                      />
+                      <Button
+                        onClick={handleWalletClick}
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                      >
+                        <div className="flex items-center">
+                          <Wallet className="h-4 w-4 mr-1" />
+                          <span>Open Wallet</span>
+                          {isWalletConnected() && (
+                            <div className="ml-2 h-2 w-2 bg-green-500 rounded-full"></div>
+                          )}
+                        </div>
+                      </Button>
+                    </div>
                   </Field>
+                  {isWalletConnected() && (
+                    <div className="md:col-span-2">
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-800">
+                          <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                          <span className="text-sm font-medium">MetaMask Wallet Connected</span>
+                        </div>
+                        <p className="text-sm text-green-700 mt-1">
+                          Your MetaMask wallet is connected. Click "Open Wallet" to access MetaMask interface.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Field label="Locale">
                     <Select value={prefs.locale} onValueChange={v => update('locale', v)}>
                       <SelectTrigger><SelectValue placeholder="Locale" /></SelectTrigger>
