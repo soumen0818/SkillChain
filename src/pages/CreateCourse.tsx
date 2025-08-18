@@ -407,7 +407,7 @@ export default function CreateCourse() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/teacher-dashboard')}
+              onClick={() => navigate('/teacher/dashboard')}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
