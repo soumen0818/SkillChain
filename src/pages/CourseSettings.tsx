@@ -48,7 +48,7 @@ export default function CourseSettings() {
           description: "The course you're trying to manage doesn't exist.",
           variant: "destructive"
         });
-        navigate('/teacher-dashboard');
+        navigate('/teacher/dashboard');
       }
     }
   }, [courseId, getCourseById, navigate, toast]);
@@ -89,7 +89,7 @@ export default function CourseSettings() {
         title: "Course Deleted",
         description: "Your course has been permanently deleted.",
       });
-      navigate('/teacher-dashboard');
+      navigate('/teacher/dashboard');
     }
   };
 
@@ -115,7 +115,7 @@ export default function CourseSettings() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => navigate('/teacher-dashboard')}
+              onClick={() => navigate('/teacher/dashboard')}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
