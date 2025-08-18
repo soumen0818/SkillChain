@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { courseAPI } from '@/lib/api';
 import ChatComponent from '@/components/ChatComponent';
-import { 
+import {
   ArrowLeft,
   Play,
   Pause,
@@ -43,6 +43,7 @@ import {
   Filter,
   ChevronRight,
   ChevronDown,
+  ExternalLink,
   Coins,
   Trophy,
   Brain,
@@ -56,14 +57,13 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  ExternalLink,
   Trash2,
   Edit3
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import '../styles/course-study-animations.css';
 
 // Updated interfaces to match backend structure
@@ -123,7 +123,7 @@ export default function CourseStudyReal() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // State management
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,7 +139,7 @@ export default function CourseStudyReal() {
   const [searchTerm, setSearchTerm] = useState('');
   const [progress, setProgress] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
-  const [lessonProgress, setLessonProgress] = useState<{[key: string]: number}>({});
+  const [lessonProgress, setLessonProgress] = useState<{ [key: string]: number }>({});
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isSavingProgress, setIsSavingProgress] = useState(false);
@@ -156,29 +156,35 @@ export default function CourseStudyReal() {
       try {
         setLoading(true);
         setError(null);
-        
+
         console.log('Fetching course with ID:', courseId);
         const courseData = await courseAPI.getById(courseId);
         console.log('Fetched course data:', courseData);
-        
+
         setCourse(courseData);
-        
+
         // Auto-expand first module and select first lesson
         if (courseData.syllabus && courseData.syllabus.length > 0) {
           const firstModule = courseData.syllabus[0];
           setExpandedModules([firstModule._id || '0']);
           setSelectedModule(firstModule);
-          
+
           if (firstModule.lessons && firstModule.lessons.length > 0) {
             setSelectedLesson(firstModule.lessons[0]);
           }
         }
-        
-        // Calculate progress (mock for now - you can enhance this)
-        const totalLessons = courseData.syllabus?.reduce((total, module) => total + module.lessons.length, 0) || 0;
-        const completedLessons = Math.floor(totalLessons * 0.3); // Mock 30% completion
-        setProgress(totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0);
-        
+
+        // Calculate real progress based on completed lessons
+        if (user && courseId) {
+          const savedCompletions = localStorage.getItem(`course_completions_${courseId}_${user._id}`);
+          const completedLessonIds = savedCompletions ? JSON.parse(savedCompletions) : [];
+          setCompletedLessons(new Set(completedLessonIds));
+
+          const totalLessons = courseData.syllabus?.reduce((total, module) => total + module.lessons.length, 0) || 0;
+          const realProgress = totalLessons > 0 ? (completedLessonIds.length / totalLessons) * 100 : 0;
+          setProgress(realProgress);
+        }
+
       } catch (err: any) {
         setError(err.message || 'Failed to load course');
         console.error('Error fetching course:', err);
@@ -192,8 +198,8 @@ export default function CourseStudyReal() {
 
   // Toggle module expansion
   const toggleModule = (moduleId: string) => {
-    setExpandedModules(prev => 
-      prev.includes(moduleId) 
+    setExpandedModules(prev =>
+      prev.includes(moduleId)
         ? prev.filter(id => id !== moduleId)
         : [...prev, moduleId]
     );
@@ -230,13 +236,13 @@ export default function CourseStudyReal() {
   const getAllLessons = () => {
     if (!course?.syllabus) return [];
     const allLessons: { lesson: Lesson; module: Module; moduleIndex: number; lessonIndex: number }[] = [];
-    
+
     course.syllabus.forEach((module, moduleIndex) => {
       module.lessons.forEach((lesson, lessonIndex) => {
         allLessons.push({ lesson, module, moduleIndex, lessonIndex });
       });
     });
-    
+
     return allLessons;
   };
 
@@ -244,8 +250,8 @@ export default function CourseStudyReal() {
   const getCurrentLessonIndex = () => {
     if (!selectedLesson) return -1;
     const allLessons = getAllLessons();
-    return allLessons.findIndex(item => 
-      item.lesson._id === selectedLesson._id || 
+    return allLessons.findIndex(item =>
+      item.lesson._id === selectedLesson._id ||
       (item.lesson.title === selectedLesson.title && item.module.title === selectedModule?.title)
     );
   };
@@ -254,14 +260,14 @@ export default function CourseStudyReal() {
   const goToPreviousLesson = () => {
     const allLessons = getAllLessons();
     const currentIndex = getCurrentLessonIndex();
-    
+
     if (currentIndex > 0) {
       const previousItem = allLessons[currentIndex - 1];
       setSelectedLesson(previousItem.lesson);
       setSelectedModule(previousItem.module);
       setCurrentTime(0);
       setIsPlaying(false);
-      
+
       toast({
         title: "Previous Lesson",
         description: `Now viewing: ${previousItem.lesson.title}`,
@@ -279,14 +285,14 @@ export default function CourseStudyReal() {
   const goToNextLesson = () => {
     const allLessons = getAllLessons();
     const currentIndex = getCurrentLessonIndex();
-    
+
     if (currentIndex < allLessons.length - 1) {
       const nextItem = allLessons[currentIndex + 1];
       setSelectedLesson(nextItem.lesson);
       setSelectedModule(nextItem.module);
       setCurrentTime(0);
       setIsPlaying(false);
-      
+
       toast({
         title: "Next Lesson",
         description: `Now viewing: ${nextItem.lesson.title}`,
@@ -302,9 +308,9 @@ export default function CourseStudyReal() {
   // Save lesson progress
   const saveProgress = async () => {
     if (!selectedLesson || !user) return;
-    
+
     setIsSavingProgress(true);
-    
+
     try {
       const progressData = {
         courseId,
@@ -319,7 +325,7 @@ export default function CourseStudyReal() {
       const progressMap = existingProgress ? JSON.parse(existingProgress) : {};
       progressMap[selectedLesson._id || selectedLesson.title] = progressData;
       localStorage.setItem(`course_progress_${courseId}_${user._id}`, JSON.stringify(progressMap));
-      
+
       setLessonProgress(prev => ({
         ...prev,
         [selectedLesson._id || selectedLesson.title]: Math.floor(progress)
@@ -343,30 +349,37 @@ export default function CourseStudyReal() {
   // Mark lesson as complete
   const markAsComplete = async () => {
     if (!selectedLesson || !user) return;
-    
+
     setIsMarkingComplete(true);
-    
+
     try {
       const lessonKey = selectedLesson._id || selectedLesson.title;
-      
+
       // Save completion to localStorage (can be extended to backend)
       const existingCompletions = localStorage.getItem(`course_completions_${courseId}_${user._id}`);
       const completions = existingCompletions ? JSON.parse(existingCompletions) : [];
-      
+
       if (!completions.includes(lessonKey)) {
         completions.push(lessonKey);
         localStorage.setItem(`course_completions_${courseId}_${user._id}`, JSON.stringify(completions));
-        
+
         setCompletedLessons(prev => new Set([...prev, lessonKey]));
-        
-        // Show celebration animation
-        setShowCompletionAnimation(true);
-        setTimeout(() => setShowCompletionAnimation(false), 3000);
-        
-        toast({
-          title: "🎉 Lesson Completed!",
-          description: `Great job! You've completed "${selectedLesson.title}".`,
-        });
+
+        // Recalculate progress based on real completions
+        if (course) {
+          const totalLessons = course.syllabus?.reduce((total, module) => total + module.lessons.length, 0) || 0;
+          const newProgress = totalLessons > 0 ? (completions.length / totalLessons) * 100 : 0;
+          setProgress(newProgress);
+
+          // Show celebration animation
+          setShowCompletionAnimation(true);
+          setTimeout(() => setShowCompletionAnimation(false), 3000);
+
+          toast({
+            title: "🎉 Lesson Completed!",
+            description: `Great job! You've completed "${selectedLesson.title}". Progress: ${Math.round(newProgress)}%`,
+          });
+        }
       } else {
         toast({
           title: "Already completed",
@@ -392,12 +405,12 @@ export default function CourseStudyReal() {
       if (savedCompletions) {
         setCompletedLessons(new Set(JSON.parse(savedCompletions)));
       }
-      
+
       // Load lesson progress
       const savedProgress = localStorage.getItem(`course_progress_${courseId}_${user._id}`);
       if (savedProgress) {
         const progressMap = JSON.parse(savedProgress);
-        const progressObj: {[key: string]: number} = {};
+        const progressObj: { [key: string]: number } = {};
         Object.keys(progressMap).forEach(key => {
           progressObj[key] = progressMap[key].progress || 0;
         });
@@ -417,12 +430,94 @@ export default function CourseStudyReal() {
     }
   };
 
+  // Render lesson content properly (handle URLs)
+  const renderLessonContent = (content: string) => {
+    if (!content) return null;
+
+    // Check if content is a URL (video or document)
+    const isUrl = content.includes('http') || content.includes('cloudinary.com');
+
+    if (isUrl) {
+      // If it's a video URL
+      if (content.includes('.mp4') || content.includes('video') || content.includes('youtube') || content.includes('vimeo')) {
+        return renderVideoPlayer(content);
+      }
+
+      // If it's a document URL
+      if (content.includes('.pdf') || content.includes('document') || content.includes('docs')) {
+        return (
+          <div className="relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-8 rounded-2xl border-2 border-green-200 shadow-xl">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <FileText className="w-10 h-10" />
+              </div>
+              <h3 className="text-xl font-bold text-green-700 mb-4">📄 Document Available</h3>
+              <p className="text-green-600 mb-6">Click the button below to open the document:</p>
+
+              <Button
+                onClick={() => window.open(content, '_blank')}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 text-lg font-semibold shadow-lg"
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Open Document
+              </Button>
+            </div>
+            <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+              📄 Document
+            </div>
+          </div>
+        );
+      }
+
+      // For other URLs, show as a link
+      return (
+        <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 p-8 rounded-2xl border-2 border-blue-200 shadow-xl">
+          <div className="text-center">
+            <Globe className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-blue-700 mb-4">🔗 External Resource</h3>
+            <Button
+              onClick={() => window.open(content, '_blank')}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 text-lg font-semibold shadow-lg"
+            >
+              <ExternalLink className="w-5 h-5 mr-2" />
+              Open Resource
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Regular text content
+    return (
+      <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 p-8 rounded-2xl border-2 border-blue-200 shadow-xl">
+        <div className="flex items-center mb-6">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl flex items-center justify-center mr-4">
+            <Book className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+              📚 Lesson Content
+            </h3>
+            <p className="text-blue-600 text-sm">Study material and key concepts</p>
+          </div>
+        </div>
+        <div className="prose max-w-none">
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-sm">
+            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-lg">
+              {content}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Process video URL for different sources
   const processVideoUrl = (url: string) => {
     if (!url) return null;
-    
+
     console.log('Processing video URL:', url);
-    
+
     // Handle Cloudinary URLs - ensure they're in the correct format
     if (url.includes('cloudinary.com')) {
       // If it's already a proper Cloudinary video URL, return as is
@@ -431,29 +526,29 @@ export default function CourseStudyReal() {
       }
       // If it's a Cloudinary URL but not properly formatted, try to fix it
       return url;
-    } 
+    }
     // Handle YouTube URLs
     else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const videoId = url.includes('youtu.be') 
+      const videoId = url.includes('youtu.be')
         ? url.split('/').pop()?.split('?')[0]
         : url.split('v=')[1]?.split('&')[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    } 
+    }
     // Handle Vimeo URLs
     else if (url.includes('vimeo.com')) {
       const videoId = url.split('/').pop();
       return videoId ? `https://player.vimeo.com/video/${videoId}` : url;
     }
-    
+
     return url;
   };
 
-  // Render video player with custom controls
+  // Render actual video player
   const renderVideoPlayer = (videoUrl: string) => {
     const processedUrl = processVideoUrl(videoUrl);
-    
-    console.log('Rendering video player for URL:', processedUrl);
-    
+
+    console.log('Rendering video player for:', processedUrl);
+
     if (!processedUrl) {
       return (
         <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-2xl aspect-video flex items-center justify-center border-2 border-gray-700">
@@ -500,42 +595,6 @@ export default function CourseStudyReal() {
           }}
           controls
           className="w-full h-full rounded-2xl object-cover"
-          onTimeUpdate={(e) => {
-            const currentTime = e.currentTarget.currentTime;
-            const duration = e.currentTarget.duration;
-            setCurrentTime(currentTime);
-            
-            // Calculate and update progress
-            if (duration > 0) {
-              const newProgress = (currentTime / duration) * 100;
-              setProgress(newProgress);
-              
-              // Auto-save progress every 10 seconds
-              if (Math.floor(currentTime) % 10 === 0 && selectedLesson) {
-                const lessonKey = selectedLesson._id || selectedLesson.title;
-                setLessonProgress(prev => ({
-                  ...prev,
-                  [lessonKey]: Math.floor(newProgress)
-                }));
-              }
-              
-              // Auto-complete if watched 95% or more
-              if (newProgress >= 95 && selectedLesson) {
-                const lessonKey = selectedLesson._id || selectedLesson.title;
-                if (!completedLessons.has(lessonKey)) {
-                  setCompletedLessons(prev => new Set([...prev, lessonKey]));
-                  if (user && courseId) {
-                    const existingCompletions = localStorage.getItem(`course_completions_${courseId}_${user._id}`);
-                    const completions = existingCompletions ? JSON.parse(existingCompletions) : [];
-                    if (!completions.includes(lessonKey)) {
-                      completions.push(lessonKey);
-                      localStorage.setItem(`course_completions_${courseId}_${user._id}`, JSON.stringify(completions));
-                    }
-                  }
-                }
-              }
-            }
-          }}
           onPlay={() => {
             setIsPlaying(true);
             console.log('Video playing');
@@ -546,14 +605,13 @@ export default function CourseStudyReal() {
           }}
           onLoadStart={() => console.log('Video loading started')}
           onCanPlay={() => console.log('Video can play')}
-          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 675'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%234F46E5'/%3E%3Cstop offset='50%25' style='stop-color:%237C3AED'/%3E%3Cstop offset='100%25' style='stop-color:%232563EB'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23bg)'/%3E%3Ccircle cx='600' cy='337.5' r='60' fill='white' opacity='0.8'/%3E%3Cpolygon points='580,315 580,360 620,337.5' fill='%234F46E5'/%3E%3C/svg%3E"
         >
           <source src={processedUrl} type="video/mp4" />
           <source src={processedUrl} type="video/webm" />
           <source src={processedUrl} type="video/ogg" />
           Your browser does not support the video tag.
         </video>
-        
+
         {/* Custom overlay with video info */}
         <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm bg-opacity-90">
           <div className="flex items-center space-x-2">
@@ -606,15 +664,15 @@ export default function CourseStudyReal() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/my-learning-journey')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back Previous
           </Button>
-          
+
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl p-8">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -655,7 +713,7 @@ export default function CourseStudyReal() {
                 <div className="text-4xl font-bold mb-2">{progress.toFixed(0)}%</div>
                 <p className="text-blue-100 mb-3">Progress</p>
                 <div className="w-full bg-white/20 rounded-full h-2 mb-4">
-                  <div 
+                  <div
                     className="bg-white rounded-full h-2 transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   />
@@ -685,18 +743,17 @@ export default function CourseStudyReal() {
                   <span>{course.syllabus?.reduce((total, module) => total + module.lessons.length, 0) || 0} lessons</span>
                 </div>
               </div>
-              
+
               <ScrollArea className="h-[600px] pr-4">
                 <div className="space-y-4">
                   {course.syllabus?.map((module, moduleIndex) => (
                     <div key={module._id || moduleIndex} className="space-y-3">
                       <Button
                         variant="ghost"
-                        className={`w-full justify-between p-4 h-auto rounded-xl border-2 transition-all duration-300 ${
-                          expandedModules.includes(module._id || moduleIndex.toString())
-                            ? 'bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 border-blue-300 shadow-lg'
-                            : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
-                        }`}
+                        className={`w-full justify-between p-4 h-auto rounded-xl border-2 transition-all duration-300 ${expandedModules.includes(module._id || moduleIndex.toString())
+                          ? 'bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 border-blue-300 shadow-lg'
+                          : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
+                          }`}
                         onClick={() => toggleModule(module._id || moduleIndex.toString())}
                       >
                         <div className="text-left flex-1">
@@ -721,25 +778,25 @@ export default function CourseStudyReal() {
                           )}
                         </div>
                       </Button>
-                      
+
                       {expandedModules.includes(module._id || moduleIndex.toString()) && (
                         <div className="ml-4 space-y-2 pl-4 border-l-2 border-blue-200">
                           {module.lessons.map((lesson, lessonIndex) => {
                             const LessonIcon = getLessonIcon(lesson.type);
-                            const isSelected = selectedLesson?._id === lesson._id || 
+                            const isSelected = selectedLesson?._id === lesson._id ||
                               (selectedLesson?.title === lesson.title && selectedModule?.title === module.title);
                             const lessonKey = lesson._id || lesson.title;
                             const isCompleted = completedLessons.has(lessonKey);
                             const progressValue = lessonProgress[lessonKey] || 0;
-                            
+
                             return (
                               <Button
                                 key={lesson._id || lessonIndex}
                                 variant={isSelected ? "default" : "ghost"}
                                 className={`
                                   w-full justify-start p-4 h-auto rounded-xl transition-all duration-300 relative
-                                  ${isSelected 
-                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-xl border-2 border-blue-400' 
+                                  ${isSelected
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-xl border-2 border-blue-400'
                                     : 'bg-white border border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-300 hover:shadow-md'
                                   }
                                   ${isCompleted ? 'lesson-completed' : ''}
@@ -747,11 +804,10 @@ export default function CourseStudyReal() {
                                 onClick={() => selectLesson(lesson, module)}
                               >
                                 <div className="flex items-center space-x-4 w-full">
-                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center relative ${
-                                    isSelected 
-                                      ? 'bg-white/20 text-white' 
-                                      : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600'
-                                  }`}>
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center relative ${isSelected
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600'
+                                    }`}>
                                     <LessonIcon className="w-5 h-5" />
                                     {isCompleted && (
                                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
@@ -766,11 +822,10 @@ export default function CourseStudyReal() {
                                         <Trophy className="w-4 h-4 text-yellow-400 animate-pulse" />
                                       )}
                                     </div>
-                                    <div className={`text-xs mt-1 flex items-center space-x-3 ${
-                                      isSelected ? 'text-blue-100' : 'text-gray-500'
-                                    }`}>
+                                    <div className={`text-xs mt-1 flex items-center space-x-3 ${isSelected ? 'text-blue-100' : 'text-gray-500'
+                                      }`}>
                                       <span className="flex items-center">
-                                        {lesson.type === 'video' ? '🎥' : lesson.type === 'document' ? '📄' : lesson.type === 'quiz' ? '🧠' : '📝'} 
+                                        {lesson.type === 'video' ? '🎥' : lesson.type === 'document' ? '📄' : lesson.type === 'quiz' ? '🧠' : '📝'}
                                         {lesson.type}
                                       </span>
                                       {lesson.duration && (
@@ -782,24 +837,7 @@ export default function CourseStudyReal() {
                                           </span>
                                         </>
                                       )}
-                                      {progressValue > 0 && (
-                                        <>
-                                          <span>•</span>
-                                          <span className="flex items-center">
-                                            <Target className="w-3 h-3 mr-1" />
-                                            {progressValue}%
-                                          </span>
-                                        </>
-                                      )}
                                     </div>
-                                    {progressValue > 0 && progressValue < 100 && (
-                                      <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-                                        <div 
-                                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full transition-all duration-500"
-                                          style={{ width: `${progressValue}%` }}
-                                        />
-                                      </div>
-                                    )}
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     {isCompleted && (
@@ -872,134 +910,63 @@ export default function CourseStudyReal() {
                       )}
                     </div>
 
-                    {/* Video Content with Enhanced Controls */}
-                    {selectedLesson.type === 'video' && selectedLesson.videoUrl && (
+                    {/* Video Content */}
+                    {selectedLesson.type === 'video' && (selectedLesson.videoUrl || selectedLesson.content) && (
                       <div className="mb-8">
-                        {renderVideoPlayer(selectedLesson.videoUrl)}
-                        
-                        {/* Enhanced Video Controls */}
-                        <div className="mt-6 bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-100 shadow-lg">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <Button
-                                onClick={() => {
-                                  const video = document.querySelector('video') as HTMLVideoElement;
-                                  if (video) {
-                                    if (isPlaying) {
-                                      video.pause();
-                                    } else {
-                                      video.play();
-                                    }
-                                  }
-                                }}
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg px-6 py-3 text-lg font-semibold"
-                              >
-                                {isPlaying ? (
-                                  <>
-                                    <Pause className="w-5 h-5 mr-2" />
-                                    Pause Video
-                                  </>
-                                ) : (
-                                  <>
-                                    <Play className="w-5 h-5 mr-2" />
-                                    Play Video
-                                  </>
-                                )}
-                              </Button>
-                              
-                              <Button
-                                onClick={() => {
-                                  const video = document.querySelector('video') as HTMLVideoElement;
-                                  if (video) {
-                                    if (document.fullscreenElement) {
-                                      document.exitFullscreen();
-                                    } else {
-                                      video.requestFullscreen();
-                                    }
-                                  }
-                                }}
-                                variant="outline"
-                                className="border-blue-300 text-blue-600 hover:bg-blue-50 px-4 py-3 font-medium"
-                              >
-                                <Maximize className="w-5 h-5 mr-2" />
-                                Fullscreen
-                              </Button>
-                              
-                              <Button
-                                onClick={() => {
-                                  const video = document.querySelector('video') as HTMLVideoElement;
-                                  if (video) {
-                                    video.muted = !video.muted;
-                                  }
-                                }}
-                                variant="outline"
-                                className="border-blue-300 text-blue-600 hover:bg-blue-50 px-4 py-3 font-medium"
-                              >
-                                <Volume2 className="w-5 h-5 mr-2" />
-                                Audio
-                              </Button>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              <Button variant="outline" size="sm" className="border-purple-300 text-purple-600 hover:bg-purple-50">
-                                <BookmarkPlus className="w-4 h-4 mr-2" />
-                                Bookmark
-                              </Button>
-                              <Button variant="outline" size="sm" className="border-green-300 text-green-600 hover:bg-green-50">
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Share
-                              </Button>
-                              <Button variant="outline" size="sm" className="border-red-300 text-red-600 hover:bg-red-50">
-                                <Heart className="w-4 h-4 mr-2" />
-                                Like
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {/* Video Progress Info */}
-                          <div className="mt-4 pt-4 border-t border-blue-200">
-                            <div className="flex items-center justify-between text-sm">
-                              <div className="flex items-center space-x-4 text-blue-600">
-                                <span className="flex items-center">
-                                  <Clock className="w-4 h-4 mr-1" />
-                                  Duration: {selectedLesson.duration || 'N/A'}
-                                </span>
-                                <span className="flex items-center">
-                                  <PlayCircle className="w-4 h-4 mr-1" />
-                                  Status: {isPlaying ? 'Playing' : 'Paused'}
-                                </span>
-                              </div>
-                              <div className="text-purple-600 font-medium">
-                                🎯 Learning Progress: {Math.floor(progress)}%
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        {renderVideoPlayer(selectedLesson.videoUrl || selectedLesson.content)}
                       </div>
                     )}
 
-                    {/* Enhanced Text Content */}
-                    {selectedLesson.content && (
+                    {/* Document Content */}
+                    {selectedLesson.type === 'document' && (selectedLesson.documentUrl || selectedLesson.content) && (
                       <div className="mb-8">
-                        <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 p-8 rounded-2xl border-2 border-blue-200 shadow-xl">
-                          <div className="flex items-center mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl flex items-center justify-center mr-4">
-                              <Book className="w-6 h-6" />
+                        <div className="relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-8 rounded-2xl border-2 border-green-200 shadow-xl">
+                          <div className="text-center">
+                            <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6">
+                              <FileText className="w-10 h-10" />
                             </div>
-                            <div>
-                              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                                📚 Lesson Content
-                              </h3>
-                              <p className="text-blue-600 text-sm">Study material and key concepts</p>
+                            <h3 className="text-xl font-bold text-green-700 mb-4">📄 Document Available</h3>
+                            <p className="text-green-600 mb-6">Click the button below to open the document in a new tab:</p>
+
+                            <div className="flex justify-center space-x-4">
+                              <Button
+                                onClick={() => {
+                                  const documentUrl = selectedLesson.documentUrl || selectedLesson.content;
+                                  if (documentUrl) {
+                                    window.open(documentUrl, '_blank');
+                                  }
+                                }}
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 text-lg font-semibold shadow-lg"
+                              >
+                                <ExternalLink className="w-5 h-5 mr-2" />
+                                Open Document
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  const documentUrl = selectedLesson.documentUrl || selectedLesson.content;
+                                  if (documentUrl) {
+                                    navigator.clipboard.writeText(documentUrl);
+                                  }
+                                }}
+                                variant="outline"
+                                className="border-green-400 text-green-600 hover:bg-green-50 px-6 py-3 text-lg font-medium"
+                              >
+                                Copy Link
+                              </Button>
                             </div>
                           </div>
-                          <div className="prose max-w-none">
-                            <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-sm">
-                              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-lg">
-                                {selectedLesson.content}
-                              </div>
-                            </div>
+
+                          {/* Document info badge */}
+                          <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+                            📄 Document
                           </div>
+
+                          {/* Duration badge if available */}
+                          {selectedLesson?.duration && (
+                            <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
+                              {selectedLesson.duration}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1046,77 +1013,94 @@ export default function CourseStudyReal() {
                       </div>
                     )}
 
+                    {/* Lesson Completion Section */}
+                    <div className="mt-8 mb-8">
+                      <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-6 rounded-2xl border-2 border-green-200 shadow-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl flex items-center justify-center">
+                              {selectedLesson && completedLessons.has(selectedLesson._id || selectedLesson.title) ? (
+                                <CheckCircle className="w-6 h-6" />
+                              ) : (
+                                <Target className="w-6 h-6" />
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-green-700">
+                                {selectedLesson && completedLessons.has(selectedLesson._id || selectedLesson.title)
+                                  ? '✅ Lesson Completed!'
+                                  : '🎯 Ready to Complete?'
+                                }
+                              </h3>
+                              <p className="text-green-600 text-sm">
+                                {selectedLesson && completedLessons.has(selectedLesson._id || selectedLesson.title)
+                                  ? 'Great job! You\'ve mastered this lesson.'
+                                  : 'Mark this lesson as complete when you\'re done studying.'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            {selectedLesson && !completedLessons.has(selectedLesson._id || selectedLesson.title) ? (
+                              <Button
+                                onClick={markAsComplete}
+                                disabled={isMarkingComplete}
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 font-semibold shadow-lg"
+                              >
+                                {isMarkingComplete ? (
+                                  <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Completing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-5 h-5 mr-2" />
+                                    Mark Complete
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <div className="flex items-center space-x-2 text-green-600 font-semibold">
+                                <Trophy className="w-5 h-5" />
+                                <span>Completed!</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Enhanced Navigation with Animations */}
                     <div className="mt-8 pt-6 border-t-2 border-blue-100">
                       <div className="flex justify-between items-center">
-                        <Button 
-                          variant="outline" 
-                          onClick={goToPreviousLesson}
-                          disabled={getCurrentLessonIndex() === 0}
-                          className={`
-                            nav-button prev-btn border-slate-300 text-white hover:bg-slate-50 px-6 py-3 font-semibold
-                            ${getCurrentLessonIndex() === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
-                            transition-all duration-300 transform
-                          `}
-                        >
-                          <ArrowLeft className="w-5 h-5 mr-2" />
-                          Previous Lesson
-                        </Button>
-                        
-                        <div className="flex items-center space-x-4">
-                          <Button 
-                            variant="outline" 
-                            onClick={saveProgress}
-                            disabled={isSavingProgress}
+                        <div className="flex items-center justify-between">
+                          <Button
+                            variant="outline"
+                            onClick={goToPreviousLesson}
+                            disabled={getCurrentLessonIndex() === 0}
                             className={`
-                              nav-button save-progress-btn border-purple-300 text-white hover:bg-purple-50 px-4 py-3
-                              ${isSavingProgress ? 'loading' : ''}
-                              transition-all duration-300 transform hover:scale-105
+                              nav-button prev-btn border-slate-300 text-white hover:bg-slate-50 px-6 py-3 font-semibold
+                              ${getCurrentLessonIndex() === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
+                              transition-all duration-300 transform
                             `}
                           >
-                            {isSavingProgress ? (
-                              <Loader2 className="w-4 h-4 mr-2 loading-spinner" />
-                            ) : (
-                              <BookmarkPlus className="w-4 h-4 mr-2" />
-                            )}
-                            {isSavingProgress ? 'Saving...' : 'Save Progress'}
+                            <ArrowLeft className="w-5 h-5 mr-2" />
+                            Previous Lesson
                           </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            onClick={markAsComplete}
-                            disabled={isMarkingComplete}
+
+                          <Button
+                            onClick={goToNextLesson}
+                            disabled={getCurrentLessonIndex() === getAllLessons().length - 1}
                             className={`
-                              nav-button complete-btn border-green-300 text-white hover:bg-green-50 px-4 py-3
-                              ${completedLessons.has(selectedLesson?._id || selectedLesson?.title || '') ? 'completed' : ''}
-                              ${isMarkingComplete ? 'loading' : ''}
-                              transition-all duration-300 transform hover:scale-105
+                              nav-button next-btn text-white px-6 py-3 font-semibold shadow-lg
+                              ${getCurrentLessonIndex() === getAllLessons().length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
+                              transition-all duration-300 transform
                             `}
                           >
-                            {isMarkingComplete ? (
-                              <Loader2 className="w-4 h-4 mr-2 loading-spinner" />
-                            ) : completedLessons.has(selectedLesson?._id || selectedLesson?.title || '') ? (
-                              <Trophy className="w-4 h-4 mr-2" />
-                            ) : (
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                            )}
-                            {isMarkingComplete ? 'Marking...' : 
-                             completedLessons.has(selectedLesson?._id || selectedLesson?.title || '') ? 'Completed!' : 'Mark Complete'}
+                            Next Lesson
+                            <ChevronRight className="w-5 h-5 ml-2" />
                           </Button>
                         </div>
-                        
-                        <Button 
-                          onClick={goToNextLesson}
-                          disabled={getCurrentLessonIndex() === getAllLessons().length - 1}
-                          className={`
-                            nav-button next-btn text-white px-6 py-3 font-semibold shadow-lg
-                            ${getCurrentLessonIndex() === getAllLessons().length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
-                            transition-all duration-300 transform
-                          `}
-                        >
-                          Next Lesson
-                          <ChevronRight className="w-5 h-5 ml-2" />
-                        </Button>
                       </div>
                     </div>
 
@@ -1130,7 +1114,7 @@ export default function CourseStudyReal() {
                             <div className="celebration-emoji wiggle" style={{ left: '10%', top: '60%' }}>🏆</div>
                             <div className="celebration-emoji bounce-celebration" style={{ left: '90%', top: '70%' }}>✨</div>
                             <div className="celebration-emoji wiggle" style={{ left: '50%', top: '10%' }}>🎊</div>
-                            
+
                             <div className="bg-white rounded-2xl p-8 shadow-2xl border-4 border-green-200 slide-in-up">
                               <div className="text-6xl mb-4 bounce-celebration">🎉</div>
                               <h3 className="text-2xl font-bold text-green-600 mb-2">Lesson Completed!</h3>
@@ -1138,7 +1122,7 @@ export default function CourseStudyReal() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Confetti */}
                         {[...Array(20)].map((_, i) => (
                           <div
@@ -1150,7 +1134,7 @@ export default function CourseStudyReal() {
                             }}
                           />
                         ))}
-                        
+
                         {/* Sparkles */}
                         {[...Array(15)].map((_, i) => (
                           <div
@@ -1209,17 +1193,17 @@ export default function CourseStudyReal() {
                         <p className="text-yellow-600 text-sm">Capture important insights and key takeaways</p>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl border-2 border-yellow-200">
                       <div className="flex space-x-4">
-                        <Textarea 
+                        <Textarea
                           placeholder="💭 Add your notes, insights, or questions here..."
                           value={newNote}
                           onChange={(e) => setNewNote(e.target.value)}
                           className="flex-1 min-h-[120px] border-yellow-300 focus:border-yellow-500 bg-white shadow-sm"
                         />
-                        <Button 
-                          onClick={addNote} 
+                        <Button
+                          onClick={addNote}
                           className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-3 shadow-lg self-end"
                         >
                           <Plus className="w-5 h-5 mr-2" />
@@ -1228,7 +1212,7 @@ export default function CourseStudyReal() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-6">
                     {notes.length === 0 ? (
                       <div className="text-center py-12 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border-2 border-yellow-200">
@@ -1248,7 +1232,7 @@ export default function CourseStudyReal() {
                               </div>
                               <div>
                                 <span className="font-medium text-yellow-700">
-                                  📚 {selectedLesson?.title} 
+                                  📚 {selectedLesson?.title}
                                   {note.videoTime && (
                                     <span className="text-orange-600 ml-2">🎥 {note.videoTime}</span>
                                   )}
@@ -1283,7 +1267,7 @@ export default function CourseStudyReal() {
                       <p className="text-green-600 text-sm">Additional materials and downloadable content</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     {/* Sample resource cards */}
                     <div className="bg-white p-6 rounded-2xl border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -1297,7 +1281,7 @@ export default function CourseStudyReal() {
                         Download PDF
                       </Button>
                     </div>
-                    
+
                     <div className="bg-white p-6 rounded-2xl border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
                       <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl flex items-center justify-center mb-4">
                         <Code2 className="w-6 h-6" />
@@ -1309,7 +1293,7 @@ export default function CourseStudyReal() {
                         Download ZIP
                       </Button>
                     </div>
-                    
+
                     <div className="bg-white p-6 rounded-2xl border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
                       <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl flex items-center justify-center mb-4">
                         <Globe className="w-6 h-6" />
@@ -1322,7 +1306,7 @@ export default function CourseStudyReal() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="text-center py-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
                     <FileText className="w-16 h-16 mx-auto mb-6 text-green-400" />
                     <h4 className="text-xl font-semibold text-green-700 mb-2">More Resources Coming Soon!</h4>
@@ -1334,8 +1318,8 @@ export default function CourseStudyReal() {
               </TabsContent>
 
               <TabsContent value="discussion">
-                <ChatComponent 
-                  courseId={courseId!} 
+                <ChatComponent
+                  courseId={courseId!}
                   lessonId={selectedLesson?._id}
                 />
               </TabsContent>
